@@ -6,7 +6,7 @@ import { eventsQuery, parseProtectEvents } from "@/lib/protect-events";
 import { salesTotal, salesVerdict, type SalesReport, type TerminalSales } from "@/lib/sales";
 import { sessionExpiry, shouldRenew, signSession } from "@/lib/session";
 import { busiestWeekday, compareCounts, compareSince, periodDays, shareInterval, standoutHours, weekdayStats } from "@/lib/stats";
-import { entriesVerdict, entryMethod, lineSinceInPeriod } from "@/lib/entrances";
+import { entriesVerdict, entryMethod, lineSinceInPeriod, perVisitor } from "@/lib/entrances";
 import { buying, cameraCheck, middleStay, visitDays, type CameraVisitors, type VisitorsReport } from "@/lib/visitors";
 
 let failed = 0;
@@ -121,6 +121,10 @@ ok("visit days: every day, zeros too", visitDays(cam({ by_day: [{ day: "2026-10-
 ok("entrances: exact only when every entrance camera has a line", entryMethod({ cameras: [{ camera_id: "a", method: "line" }] }) === "line" && entryMethod({ cameras: [{ camera_id: "a", method: "line" }, { camera_id: "b", method: "zone" }] }) === "zone" && entryMethod({ cameras: [] }) === "zone");
 ok("entrances: a line drawn after the earlier period began is new, not growth", entriesVerdict({ entries: 400, prev_entries: 10, first_event: "2026-10-20T00:00:00Z", prev_start: "2026-10-15T00:00:00Z" }) === "new");
 ok("entrances: a line drawn inside the period is named, one drawn before it is not", lineSinceInPeriod({ cur_start: "2026-10-01T00:00:00Z", cameras: [{ camera_id: "a", method: "line", line_since: "2026-10-23T00:00:00Z" }] }) === "2026-10-23T00:00:00Z" && lineSinceInPeriod({ cur_start: "2026-10-01T00:00:00Z", cameras: [{ camera_id: "a", method: "line", line_since: "2026-09-01T00:00:00Z" }] }) === null && lineSinceInPeriod({ cur_start: "2026-10-01T00:00:00Z", cameras: [{ camera_id: "a", method: "zone", line_since: null }] }) === null);
+const placeSales = { terminals: [{ serial: "T1", units: 60, revenue: 180 }, { serial: "T2", units: 40, revenue: 100 }, { serial: "ELSEWHERE", units: 500, revenue: 2000 }] } as unknown as SalesReport;
+const pv = perVisitor({ entries: 200 }, placeSales, ["T1", "T2"]);
+ok("entrances: purchases per visitor from this place's machines only", pv.state === "ok" && pv.items === 100 && pv.perPerson === 0.5 && pv.spentPerPerson === 1.4);
+ok("entrances: no average per visitor under 30 people or purchases", perVisitor({ entries: 20 }, placeSales, ["T1"]).state === "tooFew" && perVisitor({ entries: 200 }, placeSales, []).state === "none");
 ok("entrances: compared like the rest", entriesVerdict({ entries: 300, prev_entries: 150, first_event: "2026-06-01T00:00:00Z", prev_start: "2026-10-15T00:00:00Z" }) === "up");
 
 // ── Sales ─────────────────────────────────────────────────────────────────────

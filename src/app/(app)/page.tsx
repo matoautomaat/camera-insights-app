@@ -9,7 +9,7 @@ import { fmt } from "@/i18n/format";
 import { getI18n } from "@/i18n/server";
 import { requireLogin } from "@/lib/auth";
 import { DEMO, getCameras, getEntrancesReport, getSalesReport, getSyncStates, getTerminals, getVisitorsReport } from "@/lib/data";
-import { entriesVerdict, entryMethod, lineSinceInPeriod } from "@/lib/entrances";
+import { entriesVerdict, entryMethod, lineSinceInPeriod, perVisitor } from "@/lib/entrances";
 import { payterConfigured } from "@/lib/payter";
 import { salesTotal } from "@/lib/sales";
 import { runSync } from "@/lib/sync";
@@ -38,6 +38,10 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
 
   const method = entries ? entryMethod(entries) : null;
   const lineSince = entries ? lineSinceInPeriod(entries) : null;
+  // The machines in this place: the followed terminals a camera looks at, never the rest of the Payter account.
+  const placeSerials = [...new Set(shown.flatMap((c) => c.terminals))].filter((serial) => followed.some((t) => t.serial === serial));
+  const perPerson = entries ? perVisitor(entries, sales, placeSerials) : null;
+  const placeNames = followed.filter((t) => placeSerials.includes(t.serial)).map((t) => t.label).join(", ");
   const doorNames = entranceCameras.map((c) => c.name).join(", ");
   const money = sales ? salesTotal(sales) : null;
   const compareLabel = m.common.compare[period];
@@ -80,11 +84,21 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
                     f={f}
                   />
                 </div>
+                {perPerson?.state === "ok" && (
+                  <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1">
+                    <Stat label={m.overview.perVisitorItems} value={f.number(Math.round(perPerson.perPerson * 100) / 100)} />
+                    <Stat label={m.overview.perVisitorSpent} value={f.euro(perPerson.spentPerPerson)} />
+                  </div>
+                )}
+                {perPerson?.state === "tooFew" && <p className="mt-3 text-[13px] text-muted">{m.overview.perVisitorTooFew}</p>}
                 <p className="mt-3 text-[12.5px] leading-snug text-muted">
                   {lineSince
                     ? fmt(m.overview.entriesLineSince, { cameras: doorNames, date: f.dayMonth(lineSince) })
                     : fmt(method === "line" ? m.overview.entriesLine : m.overview.entriesZone, { cameras: doorNames })}
                 </p>
+                {perPerson && perPerson.state !== "none" && (
+                  <p className="mt-2 text-[12.5px] leading-snug text-muted">{fmt(m.overview.perVisitorHint, { terminals: placeNames })}</p>
+                )}
               </>
             ) : (
               <p className="mt-2 text-[14px] text-muted">
