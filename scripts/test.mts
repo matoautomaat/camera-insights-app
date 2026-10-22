@@ -6,7 +6,8 @@ import { eventsQuery, parseProtectEvents } from "@/lib/protect-events";
 import { salesTotal, salesVerdict, type SalesReport, type TerminalSales } from "@/lib/sales";
 import { sessionExpiry, shouldRenew, signSession } from "@/lib/session";
 import { busiestWeekday, compareCounts, compareSince, periodDays, shareInterval, standoutHours, weekdayStats } from "@/lib/stats";
-import { buying, cameraCheck, middleStay, totalVisits, visitDays, type CameraVisitors, type VisitorsReport } from "@/lib/visitors";
+import { entriesVerdict, entryMethod } from "@/lib/entrances";
+import { buying, cameraCheck, middleStay, visitDays, type CameraVisitors, type VisitorsReport } from "@/lib/visitors";
 
 let failed = 0;
 const ok = (name: string, cond: boolean) => {
@@ -102,11 +103,11 @@ ok("check: detection off", cameraCheck({ online: true, detects: ["vehicle"] }, c
 ok("check: nobody in 24 h", cameraCheck({ online: true, detects: ["person"] }, cam({ events_24h: 0 })) === "nothingToday");
 ok("check: fine", cameraCheck({ online: true, detects: ["person"] }, cam({ events_24h: 3 })) === "fine");
 ok("visit days: every day, zeros too", visitDays(cam({ by_day: [{ day: "2026-10-01", visits: 4 }] }), report([])).length === 28);
-const settled = cam({ visits: 300, prev_visits: 150 });
-const brandNew = cam({ visits: 400, prev_visits: 0, first_event: "2026-10-15T00:00:00Z" });
-const t = totalVisits(report([settled, brandNew]));
-ok("total: a new camera never counts as growth (compares the settled ones)", t.visits === 700 && t.current === 300 && t.previous === 150 && t.verdict === "up");
-ok("total: only new cameras is new", totalVisits(report([brandNew])).verdict === "new");
+
+// ── Entrances ─────────────────────────────────────────────────────────────────
+ok("entrances: exact only when every entrance camera has a line", entryMethod({ cameras: [{ camera_id: "a", method: "line" }] }) === "line" && entryMethod({ cameras: [{ camera_id: "a", method: "line" }, { camera_id: "b", method: "zone" }] }) === "zone" && entryMethod({ cameras: [] }) === "zone");
+ok("entrances: a line drawn after the earlier period began is new, not growth", entriesVerdict({ entries: 400, prev_entries: 10, first_event: "2026-10-20T00:00:00Z", prev_start: "2026-10-15T00:00:00Z" }) === "new");
+ok("entrances: compared like the rest", entriesVerdict({ entries: 300, prev_entries: 150, first_event: "2026-06-01T00:00:00Z", prev_start: "2026-10-15T00:00:00Z" }) === "up");
 
 // ── Sales ─────────────────────────────────────────────────────────────────────
 const term1 = (over: Partial<TerminalSales>): TerminalSales => ({

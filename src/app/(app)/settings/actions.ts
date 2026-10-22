@@ -33,6 +33,16 @@ export async function setCameraHidden(form: FormData): Promise<void> {
   done();
 }
 
+/** Whether a camera sees the entrance: the cameras that do count everyone coming in, once. */
+export async function setCameraEntrance(form: FormData): Promise<void> {
+  await requireLogin();
+  if (DEMO) return;
+  const cameraId = text(form, "camera");
+  if (!(await cameraExists(cameraId))) return;
+  await db().from("ci_cameras").update({ entrance: form.get("entrance") === "true" }).eq("camera_id", cameraId);
+  done();
+}
+
 /** The Payter terminals a camera looks at: exactly the ones ticked. */
 export async function setCameraTerminals(form: FormData): Promise<void> {
   await requireLogin();

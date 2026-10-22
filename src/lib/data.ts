@@ -2,8 +2,9 @@ import { cache } from "react";
 import { db, TIME_ZONE } from "@/lib/db";
 import { DEMO } from "@/lib/demo";
 import { terminalOnline } from "@/lib/payter";
+import type { EntrancesReport } from "@/lib/entrances";
 import type { SalesReport } from "@/lib/sales";
-import { sampleCameras, sampleSales, sampleSyncStates, sampleTerminals, sampleVisitors } from "@/lib/sample";
+import { sampleCameras, sampleEntrances, sampleSales, sampleSyncStates, sampleTerminals, sampleVisitors } from "@/lib/sample";
 import { readSyncStates, type SyncState } from "@/lib/sync";
 import type { VisitorsReport } from "@/lib/visitors";
 
@@ -23,6 +24,8 @@ export type CameraInfo = {
   detects: string[];
   fullHd: boolean | null;
   hidden: boolean;
+  /** Sees the entrance: counts the people coming in (ci_entrances_report). */
+  entrance: boolean;
   /** The Payter terminals this camera looks at (followed or not). */
   terminals: string[];
 };
@@ -36,12 +39,13 @@ type CameraRow = {
   detects: string[] | null;
   full_hd: boolean | null;
   hidden: boolean;
+  entrance: boolean | null;
 };
 
 export const getCameras = cache(async (): Promise<CameraInfo[]> => {
   if (DEMO) return sampleCameras();
   const [cameras, consoles, links] = await Promise.all([
-    db().from("ci_cameras").select("console_id, camera_id, name, model, online, detects, full_hd, hidden"),
+    db().from("ci_cameras").select("console_id, camera_id, name, model, online, detects, full_hd, hidden, entrance"),
     db().from("ci_consoles").select("console_id, name"),
     db().from("ci_camera_terminals").select("camera_id, serial"),
   ]);
@@ -58,6 +62,7 @@ export const getCameras = cache(async (): Promise<CameraInfo[]> => {
       detects: c.detects ?? [],
       fullHd: c.full_hd,
       hidden: c.hidden,
+      entrance: Boolean(c.entrance),
       terminals: (links.data ?? []).filter((l) => l.camera_id === c.camera_id).map((l) => l.serial as string),
     }))
     .sort((a, b) => Number(a.hidden) - Number(b.hidden) || a.name.localeCompare(b.name));
@@ -80,6 +85,15 @@ export async function getVisitorsReport(cameraIds: string[], days: number): Prom
   const { data, error } = await db().rpc("ci_visitors_report", { camera_ids: cameraIds, period_days: days, tz: TIME_ZONE });
   if (error) throw new Error(error.message);
   return data as VisitorsReport;
+}
+
+/** Everyone who came in through the entrance cameras, each once; null without an entrance camera. */
+export async function getEntrancesReport(cameraIds: string[], days: number): Promise<EntrancesReport | null> {
+  if (!cameraIds.length) return null;
+  if (DEMO) return sampleEntrances(cameraIds, days);
+  const { data, error } = await db().rpc("ci_entrances_report", { camera_ids: cameraIds, period_days: days, tz: TIME_ZONE });
+  if (error) throw new Error(error.message);
+  return data as EntrancesReport;
 }
 
 export type TerminalInfo = {

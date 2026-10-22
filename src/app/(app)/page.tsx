@@ -8,12 +8,13 @@ import { Change, Dot, Empty, PageHeader, PeriodLinks, Section, Stat } from "@/co
 import { fmt } from "@/i18n/format";
 import { getI18n } from "@/i18n/server";
 import { requireLogin } from "@/lib/auth";
-import { DEMO, getCameras, getSalesReport, getSyncStates, getTerminals, getVisitorsReport } from "@/lib/data";
+import { DEMO, getCameras, getEntrancesReport, getSalesReport, getSyncStates, getTerminals, getVisitorsReport } from "@/lib/data";
+import { entriesVerdict, entryMethod } from "@/lib/entrances";
 import { payterConfigured } from "@/lib/payter";
 import { salesTotal } from "@/lib/sales";
 import { runSync } from "@/lib/sync";
 import { unifiConfigured } from "@/lib/unifi";
-import { cameraCheck, parsePeriod, PERIODS, totalVisits, visitsVerdict } from "@/lib/visitors";
+import { cameraCheck, parsePeriod, PERIODS, visitsVerdict } from "@/lib/visitors";
 
 /** Reading UniFi and Payter after the page can take a few calls of a few seconds each. */
 export const maxDuration = 60;
@@ -26,11 +27,17 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
   const [cameras, terminals, sync] = await Promise.all([getCameras(), getTerminals(), getSyncStates()]);
   const shown = cameras.filter((c) => !c.hidden);
   const followed = terminals.filter((t) => t.followed);
-  const [visitors, sales] = await Promise.all([getVisitorsReport(shown.map((c) => c.cameraId), days), getSalesReport(followed.map((t) => t.serial), days)]);
+  const entranceCameras = shown.filter((c) => c.entrance);
+  const [visitors, sales, entries] = await Promise.all([
+    getVisitorsReport(shown.map((c) => c.cameraId), days),
+    getSalesReport(followed.map((t) => t.serial), days),
+    getEntrancesReport(entranceCameras.map((c) => c.cameraId), days),
+  ]);
   // Whatever is due is read after the page, never before it.
   if (!DEMO) after(() => runSync());
 
-  const total = visitors ? totalVisits(visitors) : null;
+  const method = entries ? entryMethod(entries) : null;
+  const doorNames = entranceCameras.map((c) => c.name).join(", ");
   const money = sales ? salesTotal(sales) : null;
   const compareLabel = m.common.compare[period];
   const hiddenCount = cameras.length - shown.length;
@@ -55,18 +62,31 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
         <PeriodLinks hrefFor={(key) => (key === "today" ? "/" : `/?period=${key}`)} current={period} labels={m.common.periods} />
 
         <div className="grid gap-4 sm:grid-cols-2">
+          {/* Everyone who came in, once: only the entrance cameras count, never every camera added up. */}
           <section className="card px-5 py-5 sm:px-6">
-            <p className="text-[14px] font-semibold text-muted">{m.overview.visitors}</p>
-            {total ? (
+            <p className="text-[14px] font-semibold text-muted">{m.overview.entries}</p>
+            {entries ? (
               <>
-                <p className="mt-1 text-[40px] font-bold leading-none tracking-[-0.03em]">{f.number(total.visits)}</p>
+                <p className="mt-1 text-[40px] font-bold leading-none tracking-[-0.03em]">{f.number(entries.entries)}</p>
                 <div className="mt-2">
-                  <Change verdict={total.verdict} current={total.current} previous={total.previous} first={total.first} label={compareLabel} m={m} f={f} />
+                  <Change
+                    verdict={entriesVerdict(entries)}
+                    current={entries.entries}
+                    previous={entries.prev_entries}
+                    first={entries.first_event}
+                    label={compareLabel}
+                    m={m}
+                    f={f}
+                  />
                 </div>
-                <p className="mt-3 text-[12.5px] text-muted">{m.overview.visitorsHint}</p>
+                <p className="mt-3 text-[12.5px] leading-snug text-muted">
+                  {fmt(method === "line" ? m.overview.entriesLine : m.overview.entriesZone, { cameras: doorNames })}
+                </p>
               </>
             ) : (
-              <p className="mt-2 text-[14px] text-muted">{unifiConfigured() || DEMO ? m.overview.noCamerasHint : m.overview.noKeyHint}</p>
+              <p className="mt-2 text-[14px] text-muted">
+                {!unifiConfigured() && !DEMO ? m.overview.noKeyHint : shown.length ? m.overview.entriesNone : m.overview.noCamerasHint}
+              </p>
             )}
           </section>
           <section className="card px-5 py-5 sm:px-6">
