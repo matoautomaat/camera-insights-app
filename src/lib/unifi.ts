@@ -79,7 +79,8 @@ export async function listConsoles(): Promise<UnifiConsole[]> {
   let next: string | undefined;
   do {
     const res = await call(`/v1/hosts?pageSize=100${next ? `&nextToken=${encodeURIComponent(next)}` : ""}`);
-    if (!res.ok) throw new Error(`UniFi hosts: ${res.status}`);
+    // UniFi's own words with the status ("unauthorized", a missing scope): never the key, which is only in the request.
+    if (!res.ok) throw new Error(`UniFi hosts: ${res.status} ${(await res.text()).replace(/\s+/g, " ").slice(0, 160)}`.trim());
     const body = (await res.json()) as { data?: Host[]; nextToken?: string | null };
     hosts.push(...(body.data ?? []));
     next = body.nextToken || undefined;
@@ -118,7 +119,7 @@ export async function consoleCameras(consoleId: string): Promise<ProtectCamera[]
   const res = await call(protect(consoleId, "/cameras"));
   throwIfAskedToWait(consoleId, res);
   if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`UniFi cameras: ${res.status}`);
+  if (!res.ok) throw new Error(`UniFi cameras: ${res.status} ${(await res.text()).replace(/\s+/g, " ").slice(0, 160)}`.trim());
   const cameras = (await res.json()) as CameraJson[];
   return cameras.map((camera) => ({
     id: camera.id,
