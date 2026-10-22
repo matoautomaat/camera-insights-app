@@ -1,0 +1,244 @@
+@import "tailwindcss";
+
+/* Dark when the html element has .dark: set before the first paint by the script in layout.tsx. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Every colour is a token here, light and dark; components never carry a hex of their own. */
+:root {
+  --bg: #f5f6f8;
+  --card: #ffffff;
+  --ink: #0f172a;
+  --muted: #5b6676;
+  --line: #e3e7ed;
+  --surface: #eef1f5;
+  --accent: #0f766e;
+  --accent-ink: #ffffff;
+  --accent-soft: #d5f5ef;
+  --bar: #14b8a6;
+  --bar-strong: #0f766e;
+  --up: #15803d;
+  --down: #b91c1c;
+  --warn: #b45309;
+  --live: #dc2626;
+  --shadow: 0 1px 2px rgb(15 23 42 / 0.05), 0 4px 16px rgb(15 23 42 / 0.05);
+  color-scheme: light;
+}
+
+.dark {
+  --bg: #0b1018;
+  --card: #121925;
+  --ink: #e6eaf0;
+  --muted: #94a0b2;
+  --line: #222c3a;
+  --surface: #1a2331;
+  --accent: #2dd4bf;
+  --accent-ink: #042f2e;
+  --accent-soft: #123f3b;
+  --bar: #2dd4bf;
+  --bar-strong: #5eead4;
+  --up: #4ade80;
+  --down: #f87171;
+  --warn: #fbbf24;
+  --live: #f87171;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-surface: var(--surface);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-bar: var(--bar);
+  --color-bar-strong: var(--bar-strong);
+  --color-up: var(--up);
+  --color-down: var(--down);
+  --color-warn: var(--warn);
+  --color-live: var(--live);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "tnum" 1;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 2.75rem;
+  padding: 0 1.1rem;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color 0.15s, opacity 0.15s;
+}
+.btn svg {
+  width: 18px;
+  height: 18px;
+}
+.btn:disabled {
+  opacity: 0.6;
+}
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.btn-secondary {
+  background: var(--surface);
+  color: var(--ink);
+}
+.btn-secondary:hover {
+  background: var(--line);
+}
+.btn-ghost {
+  color: var(--muted);
+}
+.btn-ghost:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+.btn-small {
+  height: 2.25rem;
+  padding: 0 0.9rem;
+  font-size: 14px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  height: 2.25rem;
+  padding: 0 0.95rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--card);
+}
+.pill[aria-current="page"],
+.pill[aria-pressed="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
+}
+
+.field {
+  height: 2.75rem;
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  padding: 0 0.85rem;
+  font-size: 16px;
+}
+.field:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* A bar chart without a chart library: columns that grow from the bottom, the value on hover or tap (focus). */
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+}
+.bars > .col {
+  position: relative;
+  flex: 1 1 0;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  min-width: 0;
+  outline: none;
+}
+.bars > .col > .bar {
+  display: block;
+  width: 100%;
+  min-height: 2px;
+  border-radius: 5px 5px 2px 2px;
+  background: var(--bar);
+  opacity: 0.85;
+}
+.bars > .col[data-strong="true"] > .bar {
+  background: var(--bar-strong);
+  opacity: 1;
+}
+.bars > .col[data-zero="true"] > .bar {
+  background: var(--line);
+}
+.bars > .col:hover > .bar,
+.bars > .col:focus-visible > .bar,
+.bars > .col:focus > .bar {
+  opacity: 1;
+  background: var(--bar-strong);
+}
+.bars > .col > .tip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 5px 9px;
+  border-radius: 9px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 5;
+}
+.bars > .col:first-child > .tip {
+  left: 0;
+  transform: none;
+}
+.bars > .col:last-child > .tip {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+.bars > .col:hover > .tip,
+.bars > .col:focus > .tip {
+  opacity: 1;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--surface), var(--line), var(--surface));
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 12px;
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
