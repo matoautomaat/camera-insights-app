@@ -6,7 +6,7 @@ import { eventsQuery, parseProtectEvents } from "@/lib/protect-events";
 import { salesTotal, salesVerdict, type SalesReport, type TerminalSales } from "@/lib/sales";
 import { sessionExpiry, shouldRenew, signSession } from "@/lib/session";
 import { busiestWeekday, compareCounts, compareSince, periodDays, shareInterval, standoutHours, weekdayStats } from "@/lib/stats";
-import { entriesVerdict, entryMethod } from "@/lib/entrances";
+import { entriesVerdict, entryMethod, lineSinceInPeriod } from "@/lib/entrances";
 import { buying, cameraCheck, middleStay, visitDays, type CameraVisitors, type VisitorsReport } from "@/lib/visitors";
 
 let failed = 0;
@@ -107,6 +107,7 @@ ok("visit days: every day, zeros too", visitDays(cam({ by_day: [{ day: "2026-10-
 // ── Entrances ─────────────────────────────────────────────────────────────────
 ok("entrances: exact only when every entrance camera has a line", entryMethod({ cameras: [{ camera_id: "a", method: "line" }] }) === "line" && entryMethod({ cameras: [{ camera_id: "a", method: "line" }, { camera_id: "b", method: "zone" }] }) === "zone" && entryMethod({ cameras: [] }) === "zone");
 ok("entrances: a line drawn after the earlier period began is new, not growth", entriesVerdict({ entries: 400, prev_entries: 10, first_event: "2026-10-20T00:00:00Z", prev_start: "2026-10-15T00:00:00Z" }) === "new");
+ok("entrances: a line drawn inside the period is named, one drawn before it is not", lineSinceInPeriod({ cur_start: "2026-10-01T00:00:00Z", cameras: [{ camera_id: "a", method: "line", line_since: "2026-10-23T00:00:00Z" }] }) === "2026-10-23T00:00:00Z" && lineSinceInPeriod({ cur_start: "2026-10-01T00:00:00Z", cameras: [{ camera_id: "a", method: "line", line_since: "2026-09-01T00:00:00Z" }] }) === null && lineSinceInPeriod({ cur_start: "2026-10-01T00:00:00Z", cameras: [{ camera_id: "a", method: "zone", line_since: null }] }) === null);
 ok("entrances: compared like the rest", entriesVerdict({ entries: 300, prev_entries: 150, first_event: "2026-06-01T00:00:00Z", prev_start: "2026-10-15T00:00:00Z" }) === "up");
 
 // ── Sales ─────────────────────────────────────────────────────────────────────

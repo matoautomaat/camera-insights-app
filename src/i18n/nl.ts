@@ -63,6 +63,7 @@ export const nl: Messages = {
     entries: "Binnengekomen",
     entriesLine: "Iedereen die binnenkomt telt één keer, aan de lijn over de deur ({cameras}), hoeveel camera's hem of haar daarna ook zien.",
     entriesZone: "Geteld aan de ingang ({cameras}) uit de persoonsdetecties: iedereen één keer, niet per camera. Wie aan de deur blijft staan, kan twee keer tellen: een lijn over de deur in UniFi Protect maakt het exact.",
+    entriesLineSince: "Sinds {date} telt iedereen die binnenkomt één keer, aan de lijn over de deur ({cameras}). De dagen ervoor zijn geteld uit de persoonsdetecties van de camera, een schatting.",
     entriesNone: "Duid bij Instellingen de camera aan die de ingang ziet: dan telt iedereen die binnenkomt één keer, hoeveel camera's hem of haar ook zien.",
     sales: "Verkoop",
     salesHint: "Wat klanten betaalden, btw inbegrepen.",

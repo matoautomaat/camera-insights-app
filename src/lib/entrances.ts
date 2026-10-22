@@ -14,10 +14,11 @@ export type EntrancesReport = {
   cur_end: string;
   prev_start: string;
   timezone: string;
-  cameras: { camera_id: string; method: EntryMethod }[];
+  /** line_since: the line's first crossing; before it the camera's detections counted. */
+  cameras: { camera_id: string; method: EntryMethod; line_since?: string | null }[];
   entries: number;
   prev_entries: number;
-  /** The first count by the method used now: a line drawn last week makes the count "new since". */
+  /** Since when every entrance camera counts the way it does now: a line drawn last week makes the count "new since". */
   first_event: string | null;
   by_day: { day: string; visits: number }[];
   by_hour: { hour: number; visits: number }[];
@@ -27,6 +28,16 @@ export type EntrancesReport = {
 /** Exact only when every entrance camera counts with a line. */
 export function entryMethod(report: Pick<EntrancesReport, "cameras">): EntryMethod {
   return report.cameras.length > 0 && report.cameras.every((c) => c.method === "line") ? "line" : "zone";
+}
+
+/**
+ * When the line took over inside this period (the last camera to get one), so the card can say the days before
+ * were counted from detections; null when the whole period was counted one way.
+ */
+export function lineSinceInPeriod(report: Pick<EntrancesReport, "cameras" | "cur_start">): string | null {
+  if (entryMethod(report) !== "line") return null;
+  const latest = report.cameras.map((c) => c.line_since ?? null).filter((s): s is string => s !== null).sort().at(-1) ?? null;
+  return latest && new Date(latest) > new Date(report.cur_start) ? latest : null;
 }
 
 /** People who came in against the period before, or "new since" when counting started after that began. */

@@ -135,7 +135,7 @@ export function sampleEntrances(cameraIds: string[], days: number): EntrancesRep
     cur_end: visitors.cur_end,
     prev_start: visitors.prev_start,
     timezone: visitors.timezone,
-    cameras: cameraIds.map((camera_id) => ({ camera_id, method: "zone" as const })),
+    cameras: cameraIds.map((camera_id) => ({ camera_id, method: "zone" as const, line_since: null })),
     entries: scale(one.visits),
     prev_entries: scale(one.prev_visits),
     first_event: one.first_event,

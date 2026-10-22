@@ -61,6 +61,7 @@ export const en = {
     entries: "Came in",
     entriesLine: "Everyone who walks in counts once, at the line across the door ({cameras}), however many cameras see them after.",
     entriesZone: "Counted at the entrance ({cameras}) from its person detections: everyone once, not per camera. Someone who lingers at the door can count twice: a line across the door in UniFi Protect makes it exact.",
+    entriesLineSince: "Since {date} everyone who walks in counts once, at the line across the door ({cameras}). The days before were counted from the camera's person detections, an estimate.",
     entriesNone: "Mark the camera that sees the entrance under Settings: then everyone who comes in counts once, however many cameras see them.",
     sales: "Sales",
     salesHint: "What customers paid, VAT included.",
