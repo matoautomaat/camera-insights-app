@@ -27,7 +27,48 @@ export type ProtectEvent = {
   /** Null while the detection is still going on. */
   endedAt: string | null;
   score: number | null;
+  /** Line crossings only: what Protect says about the crossing itself (which way, which line), never more. */
+  lineDetail: LineDetail | null;
 };
+
+/** The names Protect gives the parts of a crossing, and the short plain values about direction or line in it. */
+export type LineDetail = { keys: string[]; found: Record<string, string | number | boolean> };
+
+/** Paths that can only hold pictures or descriptions of a person: never read. */
+const NEVER = /thumb|image|crop|face|desc|plate|attribute|heatmap|snapshot|name|user|color|colour|age|gender|cloth/i;
+/** Paths about the crossing itself. */
+const ABOUT_CROSSING = /direct|cross|line|side|enter|exit|bound|zone/i;
+
+/**
+ * Whether Protect says which way someone crossed a line, without knowing yet how it says it: the key names in the
+ * event's metadata (names only), and plain short values (a word, a number, yes/no) under keys about direction or
+ * the line. Never a picture, a description or anything about the person.
+ */
+export function lineDetail(raw: Record<string, unknown>): LineDetail {
+  const metadata = raw.metadata && typeof raw.metadata === "object" && !Array.isArray(raw.metadata) ? (raw.metadata as Record<string, unknown>) : {};
+  const keys = Object.keys(metadata).filter((key) => !NEVER.test(key)).sort().slice(0, 30);
+  const found: Record<string, string | number | boolean> = {};
+  const walk = (value: unknown, path: string[], depth: number) => {
+    if (Object.keys(found).length >= 12 || depth > 4) return;
+    if (path.some((key) => NEVER.test(key))) return;
+    if (value && typeof value === "object") {
+      const entries = Array.isArray(value) ? value.slice(0, 4).map((v, i) => [String(i), v] as const) : Object.entries(value);
+      for (const [key, inner] of entries) walk(inner, [...path, key], depth + 1);
+      return;
+    }
+    if (!path.some((key) => ABOUT_CROSSING.test(key))) return;
+    const plain =
+      typeof value === "boolean" ||
+      (typeof value === "number" && Number.isFinite(value)) ||
+      (typeof value === "string" && value.length <= 40 && /^[\w.:-]+$/.test(value));
+    if (plain) found[path.join(".")] = value as string | number | boolean;
+  };
+  for (const [key, value] of Object.entries(raw)) {
+    if (key === "type" || key === "smartDetectTypes") continue;
+    walk(value, [key], 0);
+  }
+  return { keys, found };
+}
 
 /**
  * The query for one page of person detections between two moments. Times in
@@ -53,7 +94,7 @@ const EARLIEST = Date.UTC(2015, 0, 1);
 
 /**
  * Protect's answer as the detections Camera Insights keeps: camera, kind, from when to
- * when, what it saw. Everything else in the answer (thumbnails, heatmaps,
+ * when, what it saw, and for a line which way it was crossed (lineDetail). Everything else in the answer (thumbnails, heatmaps,
  * descriptions) stops here, so no image or description of a person ever reaches
  * the database. An item that is not a readable detection is skipped, never
  * guessed. `received` counts every item, read or not, to know whether a page
@@ -96,6 +137,7 @@ export function parseProtectEvents(
       startedAt: new Date(start).toISOString(),
       endedAt: end === null ? null : new Date(end).toISOString(),
       score: typeof raw.score === "number" && Number.isFinite(raw.score) ? Math.round(raw.score) : null,
+      lineDetail: kind === "line" ? lineDetail(raw) : null,
     });
   }
   return { events, received: list.length, lastStart };

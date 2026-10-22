@@ -137,6 +137,7 @@ async function syncConsole(consoleId: string, previous: SyncState | undefined, n
               started_at: e.startedAt,
               ended_at: e.endedAt,
               score: e.score,
+              line_detail: e.lineDetail,
             })),
             { onConflict: "console_id,event_id" },
           );
