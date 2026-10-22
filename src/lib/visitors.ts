@@ -146,19 +146,3 @@ export function cameraCheck(camera: { online: boolean; detects: string[] }, seen
   if (!seen || seen.events_24h === 0) return "nothingToday";
   return "fine";
 }
-
-/**
- * All cameras together, for the overview. The same person seen by two cameras counts twice: the page says so.
- * The comparison only takes the cameras that already counted when the earlier period began, so a camera added
- * last week never shows up as growth; with none such, it is "new" since the first camera's first detection.
- */
-export function totalVisits(report: VisitorsReport): { visits: number; current: number; previous: number; first: string | null; verdict: Verdict } {
-  const visits = report.cameras.reduce((sum, c) => sum + c.visits, 0);
-  const firsts = report.cameras.map((c) => c.first_event).filter((f): f is string => Boolean(f)).sort();
-  const first = firsts[0] ?? null;
-  const settled = report.cameras.filter((c) => c.first_event && new Date(c.first_event) < new Date(report.prev_start));
-  if (!settled.length) return { visits, current: visits, previous: 0, first, verdict: first ? "new" : "tooFew" };
-  const current = settled.reduce((sum, c) => sum + c.visits, 0);
-  const previous = settled.reduce((sum, c) => sum + c.prev_visits, 0);
-  return { visits, current, previous, first, verdict: compareSince(current, previous, null, report.prev_start) };
-}

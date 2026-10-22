@@ -1,4 +1,5 @@
 import type { CameraInfo, TerminalInfo } from "@/lib/data";
+import type { EntrancesReport } from "@/lib/entrances";
 import type { SalesReport, TerminalSales } from "@/lib/sales";
 import { isoWeekday, localDay } from "@/lib/stats";
 import type { SyncState } from "@/lib/sync";
@@ -61,6 +62,7 @@ export function sampleCameras(): CameraInfo[] {
     detects: i === 2 ? ["vehicle"] : ["person", "vehicle"],
     fullHd: c.model === "G5 Dome" ? false : null,
     hidden: false,
+    entrance: i === 0,
     terminals: c.terminals,
   }));
 }
@@ -121,6 +123,26 @@ export function sampleVisitors(cameraIds: string[], days: number): VisitorsRepor
     };
   });
   return { cur_start: w.cur_start, cur_end: w.cur_end, prev_start: w.prev_start, timezone: w.timezone, cameras };
+}
+
+/** The people coming in at the first camera: about a third of all detections, as a door sees each person once. */
+export function sampleEntrances(cameraIds: string[], days: number): EntrancesReport {
+  const visitors = sampleVisitors(cameraIds, days);
+  const scale = (n: number) => Math.round(n * 0.85);
+  const one = visitors.cameras[0];
+  return {
+    cur_start: visitors.cur_start,
+    cur_end: visitors.cur_end,
+    prev_start: visitors.prev_start,
+    timezone: visitors.timezone,
+    cameras: cameraIds.map((camera_id) => ({ camera_id, method: "zone" as const })),
+    entries: scale(one.visits),
+    prev_entries: scale(one.prev_visits),
+    first_event: one.first_event,
+    by_day: one.by_day.map((d) => ({ day: d.day, visits: scale(d.visits) })),
+    by_hour: one.by_hour.map((h) => ({ hour: h.hour, visits: scale(h.visits) })),
+    by_weekday: one.by_weekday.map((w) => ({ weekday: w.weekday, visits: scale(w.visits) })),
+  };
 }
 
 const PRICES: Record<string, number> = { "11": 2.5, "12": 2.5, "21": 3.2, "23": 4.5, "35": 3.75, "41": 1.8, "52": 6.5 };

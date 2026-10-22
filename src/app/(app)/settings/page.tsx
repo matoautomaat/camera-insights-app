@@ -11,7 +11,7 @@ import { payterConfigured } from "@/lib/payter";
 import type { SyncState } from "@/lib/sync";
 import { unifiConfigured } from "@/lib/unifi";
 import { setLanguage } from "../actions";
-import { renameTerminal, setCameraHidden, setCameraTerminals, setTerminalFollowed } from "./actions";
+import { renameTerminal, setCameraEntrance, setCameraHidden, setCameraTerminals, setTerminalFollowed } from "./actions";
 
 export async function generateMetadata() {
   const { m } = await getI18n();
@@ -77,6 +77,16 @@ export default async function SettingsPage() {
                       </p>
                       <p className="text-[13px] text-muted">{[camera.model, camera.consoleName].filter(Boolean).join(" · ")}</p>
                     </div>
+                    <div className="flex flex-wrap gap-2">
+                    {!camera.hidden && (
+                      <form action={setCameraEntrance}>
+                        <input type="hidden" name="camera" value={camera.cameraId} />
+                        <input type="hidden" name="entrance" value={camera.entrance ? "false" : "true"} />
+                        <button type="submit" className={`btn btn-small ${camera.entrance ? "btn-primary" : "btn-secondary"}`} aria-pressed={camera.entrance}>
+                          {camera.entrance ? m.settings.entranceOn : m.settings.entranceSet}
+                        </button>
+                      </form>
+                    )}
                     <form action={setCameraHidden}>
                       <input type="hidden" name="camera" value={camera.cameraId} />
                       <input type="hidden" name="hidden" value={camera.hidden ? "false" : "true"} />
@@ -84,6 +94,7 @@ export default async function SettingsPage() {
                         {camera.hidden ? m.settings.show : m.settings.hide}
                       </button>
                     </form>
+                    </div>
                   </div>
                   {!camera.hidden && (
                     <form action={setCameraTerminals} className="flex flex-wrap items-center gap-x-4 gap-y-2">
