@@ -1,4 +1,5 @@
 import { CircleCheck, CircleSlash, TriangleAlert } from "lucide-react";
+import { AutoSaveCheckbox } from "@/components/auto-save-checkbox";
 import { Dot, PageHeader, Panel } from "@/components/ui";
 import { FetchNow } from "@/components/fetch-now";
 import { fmt } from "@/i18n/format";
@@ -93,13 +94,15 @@ export default async function SettingsPage() {
                         <>
                           {followed.map((t) => (
                             <label key={t.serial} className="inline-flex items-center gap-2 text-[14px]">
-                              <input type="checkbox" name="serial" value={t.serial} defaultChecked={camera.terminals.includes(t.serial)} className="size-4 accent-[var(--accent)]" />
+                              <AutoSaveCheckbox name="serial" value={t.serial} defaultChecked={camera.terminals.includes(t.serial)} className="size-4 accent-[var(--accent)]" />
                               {t.label}
                             </label>
                           ))}
-                          <button type="submit" className="btn btn-ghost btn-small">
-                            {m.common.save}
-                          </button>
+                          <noscript>
+                            <button type="submit" className="btn btn-secondary btn-small">
+                              {m.common.save}
+                            </button>
+                          </noscript>
                         </>
                       )}
                     </form>
