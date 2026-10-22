@@ -34,6 +34,9 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
   const money = sales ? salesTotal(sales) : null;
   const compareLabel = m.common.compare[period];
   const hiddenCount = cameras.length - shown.length;
+  // Reading the consoles failed: a refused key (401/403) is a setup step, anything else is shown as it came.
+  const unifiError = sync.find((s) => s.source === "consoles")?.lastError ?? null;
+  const keyRefused = unifiError ? /\b(401|403)\b/.test(unifiError) : false;
 
   return (
     <>
@@ -92,6 +95,12 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
         >
           {!unifiConfigured() && !DEMO ? (
             <Empty title={m.overview.noKey} hint={m.overview.noKeyHint} icon={<Cctv className="size-5" />} />
+          ) : shown.length === 0 && unifiError ? (
+            <Empty
+              title={keyRefused ? m.overview.keyRefused : m.overview.noCameras}
+              hint={keyRefused ? m.overview.keyRefusedHint : fmt(m.overview.unifiFailed, { error: unifiError.slice(0, 120) })}
+              icon={<Cctv className="size-5" />}
+            />
           ) : shown.length === 0 ? (
             <Empty title={m.overview.noCameras} hint={m.overview.noCamerasHint} icon={<Cctv className="size-5" />} />
           ) : (
