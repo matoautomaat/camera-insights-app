@@ -28,7 +28,20 @@ const parsed = parseProtectEvents(
   now,
 );
 ok("events: zone, line and loiter kept, motion and a seconds timestamp dropped", parsed.events.map((e) => e.eventId).join() === "a,b,e");
-ok("events: nothing but camera, kind, times, objects and score", Object.keys(parsed.events[0]).sort().join() === "cameraId,endedAt,eventId,kind,objects,score,startedAt");
+ok("events: nothing but camera, kind, times, objects and score", Object.keys(parsed.events[0]).sort().join() === "cameraId,endedAt,eventId,kind,lineDetail,objects,score,startedAt" && parsed.events[0].lineDetail === null);
+const crossing = parseProtectEvents(
+  [{
+    id: "l", type: "smartDetectLine", camera: "cam2", start: now - 5_000, smartDetectTypes: ["person"], thumbnail: "e-123", description: "a woman in a red coat",
+    metadata: {
+      lineCrossing: { direction: "IN", lineId: "abc123", label: "a woman walking in" },
+      detectedThumbnails: [{ croppedId: "t1", type: "person", attributes: { color: "red", direction: "left" } }],
+      zonesStatus: { "1": { level: 3 } },
+    },
+  }],
+  now,
+).events[0].lineDetail;
+ok("events: a line crossing keeps which way and which line", crossing?.found["metadata.lineCrossing.direction"] === "IN" && crossing?.found["metadata.lineCrossing.lineId"] === "abc123" && crossing?.keys.join() === "lineCrossing,zonesStatus");
+ok("events: a line crossing keeps no picture, description or person", crossing !== null && !/red|woman|t1|e-123|croppedId|left/.test(JSON.stringify(crossing)));
 ok("events: camera as object", parsed.events[1].cameraId === "cam2");
 ok("events: an end before the start is no end", parsed.events[2].endedAt === null);
 ok("events: every item counts for a full page", parsed.received === 5);
