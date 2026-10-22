@@ -9,7 +9,7 @@ import { fmt } from "@/i18n/format";
 import { getI18n } from "@/i18n/server";
 import { requireLogin } from "@/lib/auth";
 import { DEMO, getCameras, getEntrancesReport, getSalesReport, getSyncStates, getTerminals, getVisitorsReport } from "@/lib/data";
-import { entriesVerdict, entryMethod } from "@/lib/entrances";
+import { entriesVerdict, entryMethod, lineSinceInPeriod } from "@/lib/entrances";
 import { payterConfigured } from "@/lib/payter";
 import { salesTotal } from "@/lib/sales";
 import { runSync } from "@/lib/sync";
@@ -37,6 +37,7 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
   if (!DEMO) after(() => runSync());
 
   const method = entries ? entryMethod(entries) : null;
+  const lineSince = entries ? lineSinceInPeriod(entries) : null;
   const doorNames = entranceCameras.map((c) => c.name).join(", ");
   const money = sales ? salesTotal(sales) : null;
   const compareLabel = m.common.compare[period];
@@ -80,7 +81,9 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
                   />
                 </div>
                 <p className="mt-3 text-[12.5px] leading-snug text-muted">
-                  {fmt(method === "line" ? m.overview.entriesLine : m.overview.entriesZone, { cameras: doorNames })}
+                  {lineSince
+                    ? fmt(m.overview.entriesLineSince, { cameras: doorNames, date: f.dayMonth(lineSince) })
+                    : fmt(method === "line" ? m.overview.entriesLine : m.overview.entriesZone, { cameras: doorNames })}
                 </p>
               </>
             ) : (
