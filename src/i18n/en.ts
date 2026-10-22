@@ -173,6 +173,14 @@ export const en = {
     catchingUp: "Still reading Payter's history up to {date}: older days fill in over the next runs.",
     camera: "Camera: {name}",
   },
+  setup: {
+    title: "The app cannot reach its database",
+    missing: "SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set in Vercel (Settings → Environment Variables). Add them and deploy again.",
+    invalidKey: "Supabase refuses the key in SUPABASE_SERVICE_ROLE_KEY. In Supabase, open the project, then Project Settings → API Keys, and copy the service_role key (it starts with eyJ) or a secret key (it starts with sb_secret_). Put it in Vercel under Settings → Environment Variables, then redeploy.",
+    unreachable: "The database did not answer. Try again in a minute; if it stays like this, check SUPABASE_URL in Vercel.",
+    retry: "Try again",
+    error: "This page could not load. Try again; if it keeps happening, look at Settings → Connections.",
+  },
   settings: {
     title: "Settings",
     subtitle: "What the app reads, and which cameras and terminals belong together.",

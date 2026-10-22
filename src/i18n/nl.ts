@@ -175,6 +175,14 @@ export const nl: Messages = {
     catchingUp: "De geschiedenis van Payter is ingelezen tot {date}: oudere dagen vullen zich de volgende keren aan.",
     camera: "Camera: {name}",
   },
+  setup: {
+    title: "De app bereikt zijn databank niet",
+    missing: "SUPABASE_URL of SUPABASE_SERVICE_ROLE_KEY staat niet in Vercel (Settings → Environment Variables). Voeg ze toe en rol opnieuw uit.",
+    invalidKey: "Supabase weigert de sleutel in SUPABASE_SERVICE_ROLE_KEY. Open in Supabase het project, dan Project Settings → API Keys, en kopieer de service_role-sleutel (begint met eyJ) of een secret key (begint met sb_secret_). Zet hem in Vercel bij Settings → Environment Variables en rol opnieuw uit (Redeploy).",
+    unreachable: "De databank antwoordde niet. Probeer het over een minuut opnieuw; blijft het zo, kijk dan SUPABASE_URL in Vercel na.",
+    retry: "Opnieuw proberen",
+    error: "Deze pagina kon niet laden. Probeer opnieuw; gebeurt het blijvend, kijk dan bij Instellingen → Koppelingen.",
+  },
   settings: {
     title: "Instellingen",
     subtitle: "Wat de app leest, en welke camera's en terminals bij elkaar horen.",

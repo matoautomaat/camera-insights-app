@@ -13,8 +13,10 @@ function secret(): string | null {
   const own = process.env.SESSION_SECRET?.trim();
   if (own) return own;
   const password = process.env.APP_PASSWORD;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-  return password && key ? `${password}\u0000${key}` : null;
+  // The database key makes the signing key long and random; without it (a setup not finished) the password alone
+  // still lets someone in, so the app can say what is missing.
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ?? "";
+  return password ? `${password}\u0000${key}` : null;
 }
 
 async function signingKey(): Promise<CryptoKey | null> {

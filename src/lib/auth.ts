@@ -40,13 +40,15 @@ export async function logIn(password: string): Promise<LoginResult> {
   if (DEMO) return passwordMatches(password) ? setSession() : "wrong";
   const ipHash = await addressHash();
   const since = new Date(Date.now() - WINDOW_MS).toISOString();
+  // A database that cannot be reached (a setup not finished) still lets the right password in, so the app can say
+  // what is wrong; guessing then only has the wait below against it.
   const [mine, everyone] = await Promise.all([
-    db().from("ci_login_failures").select("ip_hash", { count: "exact", head: true }).eq("ip_hash", ipHash).gte("at", since),
-    db().from("ci_login_failures").select("ip_hash", { count: "exact", head: true }).gte("at", since),
+    countFailures(ipHash, since),
+    countFailures(null, since),
   ]);
-  if ((mine.count ?? 0) >= PER_ADDRESS || (everyone.count ?? 0) >= OVERALL) return "tooMany";
+  if (mine >= PER_ADDRESS || everyone >= OVERALL) return "tooMany";
   if (!passwordMatches(password)) {
-    await db().from("ci_login_failures").insert({ ip_hash: ipHash });
+    await Promise.resolve(db().from("ci_login_failures").insert({ ip_hash: ipHash })).catch(() => undefined);
     // A little wait makes guessing slower still, and costs a person who mistyped nothing.
     await new Promise((resolve) => setTimeout(resolve, 600));
     return "wrong";
@@ -64,6 +66,18 @@ async function setSession(): Promise<"ok"> {
     expires: session.expires,
   });
   return "ok";
+}
+
+/** Wrong passwords since a moment, from one address or from everyone; 0 when the database cannot say. */
+async function countFailures(ipHash: string | null, since: string): Promise<number> {
+  try {
+    let query = db().from("ci_login_failures").select("ip_hash", { count: "exact", head: true }).gte("at", since);
+    if (ipHash) query = query.eq("ip_hash", ipHash);
+    const { count } = await query;
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
 }
 
 export async function logOut(): Promise<void> {

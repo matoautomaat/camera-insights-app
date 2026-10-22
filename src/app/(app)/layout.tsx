@@ -4,11 +4,12 @@ import { NavLinks } from "@/components/nav-links";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getI18n } from "@/i18n/server";
 import { requireLogin } from "@/lib/auth";
+import { databaseProblem } from "@/lib/db";
 import { logOutAction } from "./actions";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   await requireLogin();
-  const { m } = await getI18n();
+  const [{ m }, problem] = await Promise.all([getI18n(), databaseProblem()]);
   return (
     <>
       <header className="sticky top-0 z-30 border-b border-line bg-bg/90 pt-[env(safe-area-inset-top)] backdrop-blur">
@@ -28,7 +29,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </form>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 sm:pb-16 sm:pt-8">{children}</main>
+      <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 sm:pb-16 sm:pt-8">
+        {/* A setup that cannot reach the database says so, instead of every page failing on it. */}
+        {problem ? (
+          <section role="alert" className="card mx-auto max-w-xl px-6 py-7">
+            <h1 className="text-[20px] font-bold">{m.setup.title}</h1>
+            <p className="mt-2 text-[15px] leading-relaxed text-muted">{m.setup[problem]}</p>
+          </section>
+        ) : (
+          children
+        )}
+      </main>
       <NavLinks placement="bottom" />
     </>
   );
