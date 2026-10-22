@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireLogin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { DEMO } from "@/lib/data";
+import { salesSource } from "@/lib/payter";
 
 // What Settings changes. Every action checks the login itself, and only names cameras and terminals that exist.
 
@@ -56,8 +57,10 @@ export async function setTerminalFollowed(form: FormData): Promise<void> {
   const serial = text(form, "serial");
   if (!(await terminalExists(serial))) return;
   const followed = form.get("followed") === "true";
-  await db().from("ci_terminals").update({ followed }).eq("serial", serial);
-  if (followed) await db().from("ci_sync").upsert({ source: "payter", watermark: 0, synced_until: null, last_run: null }, { onConflict: "source" });
+  const { data } = await db().from("ci_terminals").update({ followed }).eq("serial", serial).select("account").maybeSingle();
+  // Its own account's history is read again from the start; the other accounts carry on.
+  const account = Number(data?.account) || 1;
+  if (followed) await db().from("ci_sync").upsert({ source: salesSource({ id: account }), watermark: 0, synced_until: null, last_run: null }, { onConflict: "source" });
   done();
 }
 

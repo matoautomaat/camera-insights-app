@@ -23,6 +23,7 @@ export default async function SettingsPage() {
   const { m, f, locale } = await getI18n();
   const [cameras, terminals, sync] = await Promise.all([getCameras(), getTerminals(), getSyncStates()]);
   const followed = terminals.filter((t) => t.followed);
+  const accounts = new Set(terminals.map((t) => t.account)).size;
 
   const status = (configured: boolean, states: SyncState[]) => {
     if (!configured && !DEMO) return { ok: false, text: m.settings.notConfigured };
@@ -123,7 +124,7 @@ export default async function SettingsPage() {
                   <div className="min-w-0 flex-1">
                     <p className="text-[15px] font-semibold">{t.label}</p>
                     <p className="flex flex-wrap items-center gap-x-3 text-[13px] text-muted">
-                      <span>{[t.serial, t.model, t.site].filter(Boolean).join(" · ")}</span>
+                      <span>{[t.serial, t.model, t.site, accounts > 1 ? fmt(m.settings.account, { n: t.account }) : null].filter(Boolean).join(" · ")}</span>
                       <Dot on={t.online} label={t.online ? m.common.online : m.common.offline} />
                     </p>
                   </div>

@@ -197,6 +197,7 @@ export const en = {
     terminals: "Payter terminals",
     terminalsHint: "Your Payter account also sees terminals of other businesses. Only the terminals you follow have their sales stored.",
     follow: "Follow",
+    account: "Payter account {n}",
     following: "Following",
     unfollow: "Stop following",
     name: "Name",

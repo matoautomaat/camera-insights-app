@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { fetchTerminals, ingestMs, payterConfigured, saleRow, transactionsSince } from "@/lib/payter";
+import { fetchTerminals, ingestMs, payterAccounts, saleRow, salesSource, terminalsSource, transactionsSince, type PayterAccount } from "@/lib/payter";
 import { EVENTS_PAGE, eventsQuery, parseProtectEvents } from "@/lib/protect-events";
 import { CameraBusyError, consoleCameras, listConsoles, protectPrivate, unifiConfigured } from "@/lib/unifi";
 
@@ -157,10 +157,11 @@ async function syncConsole(consoleId: string, previous: SyncState | undefined, n
   await saveState(source, { synced_until: new Date(reached).toISOString(), last_run: new Date(now).toISOString(), last_error: failure, last_count: count });
 }
 
-/** Payter's terminals, without touching the name given here or whether it is followed. */
-async function syncTerminals(now: number) {
+/** One account's Payter terminals, without touching the name given here or whether it is followed. */
+async function syncTerminals(account: PayterAccount, now: number) {
+  const source = terminalsSource(account);
   try {
-    const terminals = await fetchTerminals();
+    const terminals = await fetchTerminals(account);
     if (terminals.length) {
       const { error } = await db()
         .from("ci_terminals")
@@ -171,34 +172,37 @@ async function syncTerminals(now: number) {
             site: t.site,
             last_connect: t.lastConnect,
             last_disconnect: t.lastDisconnect,
+            account: account.id,
             updated_at: new Date(now).toISOString(),
           })),
           { onConflict: "serial" },
         );
       if (error) throw new Error(error.message);
     }
-    await saveState("payter-terminals", { last_run: new Date(now).toISOString(), last_error: null, last_count: terminals.length });
+    await saveState(source, { last_run: new Date(now).toISOString(), last_error: null, last_count: terminals.length });
   } catch (error) {
-    console.error("Payter terminals not read", { error: describe(error) });
-    await saveState("payter-terminals", { last_run: new Date(now).toISOString(), last_error: describe(error) });
+    console.error("Payter terminals not read", { account: account.id, error: describe(error) });
+    await saveState(source, { last_run: new Date(now).toISOString(), last_error: describe(error) });
   }
 }
 
 /**
- * The sales of the followed terminals since the watermark, page by page until the deadline. The watermark moves
- * on every document, followed or not, so another business's sales are never read twice and never stored.
+ * One account's sales of the followed terminals since its watermark, page by page until the deadline. The watermark
+ * moves on every document, followed or not, so another business's sales are never read twice and never stored. An
+ * account none of whose terminals is followed is not read at all.
  */
-async function syncSales(previous: SyncState | undefined, now: number, deadline: number) {
+async function syncSales(account: PayterAccount, previous: SyncState | undefined, now: number, deadline: number) {
+  const source = salesSource(account);
   let watermark = previous?.watermark ?? 0;
   let count = 0;
   let failure: string | null = null;
-  await saveState("payter", { last_run: new Date(now).toISOString() });
+  await saveState(source, { last_run: new Date(now).toISOString() });
   try {
-    const { data, error } = await db().from("ci_terminals").select("serial").eq("followed", true);
+    const { data, error } = await db().from("ci_terminals").select("serial").eq("followed", true).eq("account", account.id);
     if (error) throw new Error(error.message);
     const followed = new Set((data ?? []).map((row) => row.serial as string));
     if (followed.size) {
-      for await (const page of transactionsSince(watermark)) {
+      for await (const page of transactionsSince(account, watermark)) {
         const rows = page.map(saleRow).filter((row): row is NonNullable<typeof row> => row !== null && followed.has(row.serial));
         if (rows.length) {
           const { error: upsertError } = await db().from("ci_sales").upsert(rows, { onConflict: "payter_id" });
@@ -207,15 +211,15 @@ async function syncSales(previous: SyncState | undefined, now: number, deadline:
         }
         for (const doc of page) watermark = Math.max(watermark, ingestMs(doc) ?? watermark);
         // Saved per page, so a run that is cut off loses at most one page.
-        await saveState("payter", { watermark, synced_until: new Date(watermark).toISOString() });
+        await saveState(source, { watermark, synced_until: new Date(watermark).toISOString() });
         if (Date.now() > deadline) break;
       }
     }
   } catch (error) {
     failure = describe(error);
-    console.error("Payter sales not read", { error: failure });
+    console.error("Payter sales not read", { account: account.id, error: failure });
   }
-  await saveState("payter", { watermark, last_run: new Date(now).toISOString(), last_error: failure, last_count: count });
+  await saveState(source, { watermark, last_run: new Date(now).toISOString(), last_error: failure, last_count: count });
 }
 
 /** The app's own address, so the database's 10-minute clock can call /api/cron. Only the production site. */
@@ -256,11 +260,11 @@ export async function runSync({ force = false, tidy = false, budgetMs = 45_000 }
         if (force || due(previous, CONSOLE_EVERY_MS, now)) work.push(syncConsole(id, previous, now));
       }
     }
-    if (payterConfigured()) {
+    for (const account of payterAccounts()) {
       work.push(
         (async () => {
-          if (force || due(state("payter-terminals"), TERMINALS_EVERY_MS, now)) await syncTerminals(now);
-          if (force || due(state("payter"), PAYTER_EVERY_MS, now)) await syncSales(state("payter"), now, deadline);
+          if (force || due(state(terminalsSource(account)), TERMINALS_EVERY_MS, now)) await syncTerminals(account, now);
+          if (force || due(state(salesSource(account)), PAYTER_EVERY_MS, now)) await syncSales(account, state(salesSource(account)), now, deadline);
         })(),
       );
     }

@@ -91,13 +91,24 @@ export type TerminalInfo = {
   site: string | null;
   online: boolean;
   followed: boolean;
+  /** Which Payter login it was read from: 1 = PAYTER_*, 2 = PAYTER_2_*, … */
+  account: number;
 };
 
-type TerminalRow = { serial: string; name: string | null; model: string | null; site: string | null; last_connect: string | null; last_disconnect: string | null; followed: boolean };
+type TerminalRow = {
+  serial: string;
+  name: string | null;
+  model: string | null;
+  site: string | null;
+  last_connect: string | null;
+  last_disconnect: string | null;
+  followed: boolean;
+  account: number | null;
+};
 
 export const getTerminals = cache(async (): Promise<TerminalInfo[]> => {
   if (DEMO) return sampleTerminals();
-  const { data, error } = await db().from("ci_terminals").select("serial, name, model, site, last_connect, last_disconnect, followed");
+  const { data, error } = await db().from("ci_terminals").select("serial, name, model, site, last_connect, last_disconnect, followed, account");
   if (error) throw new Error(error.message);
   return ((data ?? []) as TerminalRow[])
     .map((t) => ({
@@ -108,6 +119,7 @@ export const getTerminals = cache(async (): Promise<TerminalInfo[]> => {
       site: t.site,
       online: terminalOnline({ lastConnect: t.last_connect, lastDisconnect: t.last_disconnect }),
       followed: t.followed,
+      account: t.account ?? 1,
     }))
     .sort((a, b) => Number(b.followed) - Number(a.followed) || a.label.localeCompare(b.label));
 });

@@ -67,10 +67,10 @@ export function sampleCameras(): CameraInfo[] {
 
 export function sampleTerminals(): TerminalInfo[] {
   return [
-    { serial: "DEMO-T1", label: "Brood & drank", name: "Brood & drank", model: "P68", site: "MATO", online: true, followed: true },
-    { serial: "DEMO-T2", label: "Automaat 5&6", name: "Automaat 5&6", model: "Apollo", site: "MATO", online: true, followed: true },
-    { serial: "DEMO-T3", label: "Diksmuide", name: "Diksmuide", model: "P68", site: "MATO", online: false, followed: true },
-    { serial: "DEMO-X9", label: "ZX-0042", name: null, model: "P68", site: "ZX-0042", online: true, followed: false },
+    { serial: "DEMO-T1", label: "Brood & drank", name: "Brood & drank", model: "P68", site: "MATO", online: true, followed: true, account: 1 },
+    { serial: "DEMO-T2", label: "Automaat 5&6", name: "Automaat 5&6", model: "Apollo", site: "MATO", online: true, followed: true, account: 1 },
+    { serial: "DEMO-T3", label: "Diksmuide", name: "Diksmuide", model: "P68", site: "MATO", online: false, followed: true, account: 2 },
+    { serial: "DEMO-X9", label: "ZX-0042", name: null, model: "P68", site: "ZX-0042", online: true, followed: false, account: 1 },
   ];
 }
 

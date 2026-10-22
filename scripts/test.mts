@@ -1,7 +1,7 @@
 // The app's own logic, without UniFi, Payter or a database. Run: npm test
 import { liveInterval, retryAfterMs, sharing } from "@/lib/camera-pace";
 import { fmt, localeFrom, makeFormat } from "@/i18n/format";
-import { saleRow, terminalOnline, terminalRow } from "@/lib/payter";
+import { isSalesSource, payterAccounts, saleRow, salesSource, terminalOnline, terminalRow } from "@/lib/payter";
 import { eventsQuery, parseProtectEvents } from "@/lib/protect-events";
 import { salesTotal, salesVerdict, type SalesReport, type TerminalSales } from "@/lib/sales";
 import { sessionExpiry, shouldRenew, signSession } from "@/lib/session";
@@ -46,6 +46,11 @@ ok("payter: no serial is no sale", saleRow({ id: "p3", committedAmount: 100, txn
 const term = terminalRow({ serialNumber: "APO1", model: { name: "P68" }, data: { "Site Reference": "MATO", "Last Connect Date": "2026-10-22T03:00:00Z", "Last Disconnect Date": "2026-10-22T02:59:00Z" } });
 ok("payter: terminal read", term?.serial === "APO1" && term.model === "P68" && term.site === "MATO");
 ok("payter: up when connected after the last disconnect", term !== null && terminalOnline(term) && !terminalOnline({ lastConnect: "2026-10-22T01:00:00Z", lastDisconnect: "2026-10-22T02:00:00Z" }));
+
+const accounts = payterAccounts({ PAYTER_USERNAME: "a", PAYTER_PASSWORD: "p", PAYTER_DOMAIN: "d", PAYTER_2_USERNAME: "b", PAYTER_2_PASSWORD: "q", PAYTER_2_DOMAIN: "e", PAYTER_3_USERNAME: "c" });
+ok("payter: two accounts, an incomplete third left out", accounts.length === 2 && accounts[1].id === 2 && accounts[1].domain === "e");
+ok("payter: the first account keeps its old progress name", salesSource(accounts[0]) === "payter" && salesSource(accounts[1]) === "payter:2");
+ok("payter: sales sources recognised, terminals not", isSalesSource("payter") && isSalesSource("payter:2") && !isSalesSource("payter-terminals:2"));
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
 ok("stats: under 30 no verdict", compareCounts(20, 5) === "tooFew");

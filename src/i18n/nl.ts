@@ -199,6 +199,7 @@ export const nl: Messages = {
     terminals: "Payter-terminals",
     terminalsHint: "Je Payter-account ziet ook terminals van andere zaken. Alleen van de terminals die je volgt, wordt de verkoop bewaard.",
     follow: "Volgen",
+    account: "Payter-account {n}",
     following: "Gevolgd",
     unfollow: "Niet meer volgen",
     name: "Naam",

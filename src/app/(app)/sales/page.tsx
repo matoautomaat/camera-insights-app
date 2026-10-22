@@ -8,7 +8,7 @@ import { fmt } from "@/i18n/format";
 import { getI18n } from "@/i18n/server";
 import { requireLogin } from "@/lib/auth";
 import { DEMO, getCameras, getSalesReport, getSyncStates, getTerminals } from "@/lib/data";
-import { payterConfigured } from "@/lib/payter";
+import { isSalesSource, payterConfigured } from "@/lib/payter";
 import { salesDays, salesHours, salesTotal, salesVerdict, salesWeekdays, stillReadingUntil, type TerminalSales } from "@/lib/sales";
 import { MIN_WEEKS, weekdayStats, busiestWeekday } from "@/lib/stats";
 import { runSync } from "@/lib/sync";
@@ -43,7 +43,13 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
     return text ? `/sales?${text}` : "/sales";
   };
 
-  const catchingUp = stillReadingUntil(sync.find((s) => s.source === "payter")?.watermark);
+  // The account furthest behind in reading its history decides.
+  const catchingUp =
+    sync
+      .filter((s) => isSalesSource(s.source))
+      .map((s) => stillReadingUntil(s.watermark))
+      .filter((until): until is number => until !== null)
+      .sort((a, b) => a - b)[0] ?? null;
 
   if (!payterConfigured() && !DEMO) {
     return (

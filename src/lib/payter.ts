@@ -1,43 +1,64 @@
-// Payter's cloud (MyPayter), read the way MATO Info's own sync reads it: log in with the account
-// (PAYTER_USERNAME, PAYTER_PASSWORD, PAYTER_DOMAIN), then the Terminals index and the complete Transactions
-// ordered by ingestTime from a watermark. Only what a sale needs is kept: terminal, selection, amount, approved,
-// when. Never the card (maskedPAN and the rest of the document stop here). No other imports: the tests share it.
+// Payter's cloud (MyPayter), read the way MATO Info's own sync reads it: log in with an account, then the
+// Terminals index and the complete Transactions ordered by ingestTime from a watermark. Only what a sale needs is
+// kept: terminal, selection, amount, approved, when. Never the card (maskedPAN and the rest of the document stop
+// here). No other imports: the tests share it.
+//
+// More than one account (Xin, 22-10-2026: "2 apollo terminals … on another payter account and domain"): the first
+// is PAYTER_USERNAME / PAYTER_PASSWORD / PAYTER_DOMAIN, the next ones PAYTER_2_USERNAME … PAYTER_5_DOMAIN.
 
 const API = "https://api.mypayter.com/API";
 const PAGE = 1000;
 /** Payter's search stops at 10 000 results per query: start a new window from the newest ingestTime before that. */
 const MAX_OFFSET = 8000;
+const MAX_ACCOUNTS = 5;
 
-export function payterConfigured(): boolean {
-  return Boolean(process.env.PAYTER_USERNAME?.trim() && process.env.PAYTER_PASSWORD && process.env.PAYTER_DOMAIN?.trim());
+export type PayterAccount = { id: number; username: string; password: string; domain: string };
+
+/** Every Payter login set up, in order; one with a part missing is left out. */
+export function payterAccounts(env: Record<string, string | undefined> = process.env): PayterAccount[] {
+  const accounts: PayterAccount[] = [];
+  for (let id = 1; id <= MAX_ACCOUNTS; id++) {
+    const prefix = id === 1 ? "PAYTER_" : `PAYTER_${id}_`;
+    const username = env[`${prefix}USERNAME`]?.trim();
+    const password = env[`${prefix}PASSWORD`];
+    const domain = env[`${prefix}DOMAIN`]?.trim();
+    if (username && password && domain) accounts.push({ id, username, password, domain });
+  }
+  return accounts;
 }
 
-/** The login, kept for as long as this server runs and five minutes short of Payter's own expiry. */
-let token: { id: string; until: number } | null = null;
+export function payterConfigured(): boolean {
+  return payterAccounts().length > 0;
+}
 
-async function login(): Promise<string> {
-  if (token && token.until > Date.now()) return token.id;
+/** Where each account's progress is kept in ci_sync; the first keeps the names it had before there were more. */
+export const salesSource = (account: Pick<PayterAccount, "id">) => (account.id === 1 ? "payter" : `payter:${account.id}`);
+export const terminalsSource = (account: Pick<PayterAccount, "id">) => (account.id === 1 ? "payter-terminals" : `payter-terminals:${account.id}`);
+export const isSalesSource = (source: string) => /^payter(:\d+)?$/.test(source);
+
+/** Each account's login, kept for as long as this server runs and five minutes short of Payter's own expiry. */
+const tokens = new Map<number, { id: string; until: number }>();
+
+async function login(account: PayterAccount): Promise<string> {
+  const known = tokens.get(account.id);
+  if (known && known.until > Date.now()) return known.id;
   const res = await fetch(`${API}/Auth`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      username: process.env.PAYTER_USERNAME?.trim(),
-      password: process.env.PAYTER_PASSWORD,
-      domain: process.env.PAYTER_DOMAIN?.trim(),
-    }),
+    body: JSON.stringify({ username: account.username, password: account.password, domain: account.domain }),
     cache: "no-store",
     signal: AbortSignal.timeout(20_000),
   });
   if (!res.ok) throw new Error(`Payter login failed (${res.status})`);
   const auth = (await res.json()) as { tokenId?: string; expiresIn?: number };
   if (!auth.tokenId) throw new Error("Payter login gave no token");
-  token = { id: auth.tokenId, until: Date.now() + Math.max(60, (auth.expiresIn ?? 3600) - 300) * 1000 };
-  return token.id;
+  tokens.set(account.id, { id: auth.tokenId, until: Date.now() + Math.max(60, (auth.expiresIn ?? 3600) - 300) * 1000 });
+  return auth.tokenId;
 }
 
-async function search(body: Record<string, unknown>): Promise<unknown[]> {
+async function search(account: PayterAccount, body: Record<string, unknown>): Promise<unknown[]> {
   for (let attempt = 0; attempt < 2; attempt++) {
-    const id = await login();
+    const id = await login(account);
     const res = await fetch(`${API}/Data`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `CURO-TOKEN token="${id}"` },
@@ -47,7 +68,7 @@ async function search(body: Record<string, unknown>): Promise<unknown[]> {
     });
     // An expired login: once more with a fresh one.
     if (res.status === 401 && attempt === 0) {
-      token = null;
+      tokens.delete(account.id);
       continue;
     }
     if (!res.ok) throw new Error(`Payter data request failed (${res.status})`);
@@ -86,8 +107,8 @@ export function terminalRow(doc: unknown): PayterTerminal | null {
   };
 }
 
-export async function fetchTerminals(): Promise<PayterTerminal[]> {
-  const docs = await search({ index: "Terminals", maxResults: 200 });
+export async function fetchTerminals(account: PayterAccount): Promise<PayterTerminal[]> {
+  const docs = await search(account, { index: "Terminals", maxResults: 200 });
   return docs.map(terminalRow).filter((t): t is PayterTerminal => t !== null);
 }
 
@@ -139,13 +160,13 @@ export function ingestMs(doc: unknown): number | null {
  * Complete transactions from a watermark on, a page at a time, oldest first. The boundary document can come back
  * on the next page or run; storing on payter_id makes that harmless.
  */
-export async function* transactionsSince(fromIngestMs: number): AsyncGenerator<unknown[]> {
+export async function* transactionsSince(account: PayterAccount, fromIngestMs: number): AsyncGenerator<unknown[]> {
   let from = fromIngestMs;
   while (true) {
     let offset = 0;
     let newest = from;
     while (true) {
-      const docs = await search({
+      const docs = await search(account, {
         index: "Transactions",
         maxResults: PAGE,
         offset,
