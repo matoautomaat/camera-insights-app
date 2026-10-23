@@ -28,7 +28,16 @@ const parsed = parseProtectEvents(
   now,
 );
 ok("events: zone, line and loiter kept, motion and a seconds timestamp dropped", parsed.events.map((e) => e.eventId).join() === "a,b,e");
-ok("events: nothing but camera, kind, times, objects and score", Object.keys(parsed.events[0]).sort().join() === "cameraId,endedAt,eventId,kind,lineDetail,objects,score,startedAt" && parsed.events[0].lineDetail === null);
+ok("events: nothing but camera, kind, times, objects, score and counts", Object.keys(parsed.events[0]).sort().join() === "cameraId,endedAt,eventId,kind,lineDetail,objects,people,score,startedAt" && parsed.events[0].lineDetail === null);
+const group = parseProtectEvents(
+  [{
+    id: "g", type: "smartDetectZone", camera: "cam1", start: now - 20_000, end: now - 5_000, smartDetectTypes: ["person"], smartDetectEvents: ["s1", "s2"],
+    metadata: { detectedThumbnails: [{ type: "person", croppedId: "c1", attributes: { color: "blue" } }, { type: "person", croppedId: "c2" }, { type: "vehicle", croppedId: "c3" }], count: { in: 1, "a b": 4 } },
+  }],
+  now,
+).events[0].people;
+ok("events: how many people a detection held, as numbers", group.personThumbnails === 2 && group.thumbnails === 3 && group.subEvents === 2 && group.count.in === 1 && !("a b" in group.count));
+ok("events: the people count keeps no picture or id", !/c1|c2|c3|s1|blue|croppedId/.test(JSON.stringify(group)));
 const crossing = parseProtectEvents(
   [{
     id: "l", type: "smartDetectLine", camera: "cam2", start: now - 5_000, smartDetectTypes: ["person"], thumbnail: "e-123", description: "a woman in a red coat",
