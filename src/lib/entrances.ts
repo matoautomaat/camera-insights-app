@@ -3,7 +3,8 @@ import { compareSince, MIN_SALES, shareInterval, type Verdict } from "@/lib/stat
 // Everyone who comes in, counted once (Xin, 22-10-2026: "each person individually, not counting all the time he or
 // she gets caught on different cameras"), as ci_entrances_report gives it: a visit runs from the moment any camera in
 // the place sees a person until a minute without anyone in view, and counts when an entrance camera saw it. A visit of
-// 10 minutes or more is staff (cleaning, refilling) and left out. Its length is the time inside. Two people inside at
+// 10 minutes or more without a sale is staff (cleaning, refilling) and left out; with a sale it is customers. Its length
+// is the time inside, leaving out visits of 10 minutes or more (mostly several people one after another). Two people inside at
 // the same moment are one visit: matching people by appearance would take biometrics, deliberately not done.
 // No server imports: the pages and the tests share it.
 
@@ -24,7 +25,7 @@ export type EntrancesReport = {
   by_day: { day: string; visits: number }[];
   by_hour: { hour: number; visits: number }[];
   by_weekday: { weekday: number; visits: number }[];
-  /** Visits of 10 minutes or more, left out as staff. */
+  /** Visits of 10 minutes or more without a sale, left out as staff. */
   staff?: number;
   /** Seconds inside per visit, over the counted visits. */
   stay?: { n: number; p25: number | null; p50: number | null; p75: number | null; mean: number | null };
