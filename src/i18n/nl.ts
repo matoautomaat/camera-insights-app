@@ -68,7 +68,7 @@ export const nl: Messages = {
     perVisitorSpent: "Besteed per bezoeker",
     perVisitorTooFew: "Nog te weinig mensen of aankopen voor een gemiddelde per bezoeker.",
     timeInside: "Tijd binnen",
-    staffLeftOut: "{n} keer was iemand 10 minuten of langer binnen: niet meegeteld, dat is poetsen of bijvullen.",
+    staffLeftOut: "{n} keer was iemand 10 minuten of langer binnen zonder iets te kopen: niet meegeteld, dat is poetsen of bijvullen.",
     visitSales: "Bezoekers en verkoop",
     visitSalesHint: "De automaten waar een camera naar kijkt ({terminals}). Een bezoeker kocht iets als een van die automaten tijdens het bezoek verkocht.",
     visitSalesNone: "Vink bij Instellingen de Payter-terminals aan waar elke camera naar kijkt: dan zie je hier hoeveel bezoekers iets kochten.",

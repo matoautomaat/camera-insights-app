@@ -66,7 +66,7 @@ export const en = {
     perVisitorSpent: "Spent per visitor",
     perVisitorTooFew: "Too few people or purchases yet for an average per visitor.",
     timeInside: "Time inside",
-    staffLeftOut: "{n} times someone was inside for 10 minutes or more: left out as cleaning or refilling.",
+    staffLeftOut: "{n} times someone was inside for 10 minutes or more without buying anything: left out as cleaning or refilling.",
     visitSales: "Visitors and sales",
     visitSalesHint: "The machines a camera looks at ({terminals}). A visitor bought something when one of those machines sold during the visit.",
     visitSalesNone: "Under Settings, tick the Payter terminals each camera looks at: then you see here how many visitors bought something.",
