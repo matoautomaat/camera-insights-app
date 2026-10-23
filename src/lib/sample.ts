@@ -144,6 +144,24 @@ export function sampleEntrances(cameraIds: string[], days: number): EntrancesRep
     by_weekday: one.by_weekday.map((w) => ({ weekday: w.weekday, visits: scale(w.visits) })),
     staff: Math.min(days, 5),
     stay: { n: scale(one.visits), p25: 68, p50: 151, p75: 236, mean: 172 },
+    machines: ["DEMO-T1", "DEMO-T2", "DEMO-T3"],
+    bought: Math.round(scale(one.visits) * 0.58),
+    sales: Math.round(scale(one.visits) * 0.74),
+    revenue: Math.round(scale(one.visits) * 4.6 * 100) / 100,
+    sales_seen: Math.round(scale(one.visits) * 0.74) - (days > 1 ? 2 : 0),
+    hours: one.by_hour.map((h) => {
+      const visits = scale(h.visits);
+      const sales = Math.round(visits * 0.74);
+      const refs = ["35", "21", "12", "41"];
+      return {
+        hour: h.hour,
+        visits,
+        bought: Math.round(visits * 0.58),
+        sales,
+        revenue: Math.round(sales * 6.2 * 100) / 100,
+        top: sales ? refs.slice(0, Math.min(3, sales)).map((ref, i) => ({ serial: ["DEMO-T1", "DEMO-T2", "DEMO-T3"][(h.hour + i) % 3], item_ref: ref, units: Math.max(1, Math.round(sales / (2 + i))) })) : [],
+      };
+    }),
   };
 }
 

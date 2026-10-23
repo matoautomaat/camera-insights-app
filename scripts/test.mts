@@ -6,7 +6,7 @@ import { eventsQuery, parseProtectEvents } from "@/lib/protect-events";
 import { salesTotal, salesVerdict, type SalesReport, type TerminalSales } from "@/lib/sales";
 import { sessionExpiry, shouldRenew, signSession } from "@/lib/session";
 import { busiestWeekday, compareCounts, compareSince, periodDays, shareInterval, standoutHours, weekdayStats } from "@/lib/stats";
-import { entriesVerdict, entryMethod, lineSinceInPeriod, perVisitor, timeInside } from "@/lib/entrances";
+import { entriesVerdict, entryMethod, lineSinceInPeriod, timeInside, visitSales, type EntrancesReport } from "@/lib/entrances";
 import { buying, cameraCheck, middleStay, visitDays, type CameraVisitors, type VisitorsReport } from "@/lib/visitors";
 
 let failed = 0;
@@ -131,10 +131,11 @@ ok("visit days: every day, zeros too", visitDays(cam({ by_day: [{ day: "2026-10-
 ok("entrances: exact only when every entrance camera has a line", entryMethod({ cameras: [{ camera_id: "a", method: "line" }] }) === "line" && entryMethod({ cameras: [{ camera_id: "a", method: "line" }, { camera_id: "b", method: "zone" }] }) === "zone" && entryMethod({ cameras: [] }) === "zone");
 ok("entrances: a line drawn after the earlier period began is new, not growth", entriesVerdict({ entries: 400, prev_entries: 10, first_event: "2026-10-20T00:00:00Z", prev_start: "2026-10-15T00:00:00Z" }) === "new");
 ok("entrances: a line drawn inside the period is named, one drawn before it is not", lineSinceInPeriod({ cur_start: "2026-10-01T00:00:00Z", cameras: [{ camera_id: "a", method: "line", line_since: "2026-10-23T00:00:00Z" }] }) === "2026-10-23T00:00:00Z" && lineSinceInPeriod({ cur_start: "2026-10-01T00:00:00Z", cameras: [{ camera_id: "a", method: "line", line_since: "2026-09-01T00:00:00Z" }] }) === null && lineSinceInPeriod({ cur_start: "2026-10-01T00:00:00Z", cameras: [{ camera_id: "a", method: "zone", line_since: null }] }) === null);
-const placeSales = { terminals: [{ serial: "T1", units: 60, revenue: 180 }, { serial: "T2", units: 40, revenue: 100 }, { serial: "ELSEWHERE", units: 500, revenue: 2000 }] } as unknown as SalesReport;
-const pv = perVisitor({ entries: 200 }, placeSales, ["T1", "T2"]);
-ok("entrances: purchases per visitor from this place's machines only", pv.state === "ok" && pv.items === 100 && pv.perPerson === 0.5 && pv.spentPerPerson === 1.4);
-ok("entrances: no average per visitor under 30 people or purchases", perVisitor({ entries: 20 }, placeSales, ["T1"]).state === "tooFew" && perVisitor({ entries: 200 }, placeSales, []).state === "none");
+const visitBase = { cur_start: "", cur_end: "", prev_start: "", timezone: "Europe/Brussels", cameras: [], prev_entries: 0, first_event: null, by_day: [], by_hour: [], by_weekday: [] } satisfies Partial<EntrancesReport>;
+const vs = visitSales({ ...visitBase, entries: 40, bought: 23, machines: ["T1"], sales: 32, revenue: 160, sales_seen: 30 });
+ok("visits and sales: who bought, per visit, and sales outside a visit", vs.state === "ok" && vs.bought === 23 && vs.share !== null && Math.abs(vs.share.share - 0.575) < 1e-9 && vs.share.low < 0.575 && vs.share.high > 0.575 && vs.perVisit?.items === 0.8 && vs.perVisit?.euros === 4 && vs.unseen === 2);
+const few = visitSales({ ...visitBase, entries: 20, bought: 12, machines: ["T1"], sales: 15, revenue: 60, sales_seen: 15 });
+ok("visits and sales: no share or average under 30, no machines no section", few.state === "ok" && few.share === null && few.perVisit === null && visitSales({ ...visitBase, entries: 50, machines: [] }).state === "none");
 ok("entrances: time inside from 30 visits, the middle and the middle half", timeInside({ stay: { n: 31, p25: 65, p50: 156, p75: 231, mean: 174 } })?.p50 === 156 && timeInside({ stay: { n: 12, p25: 65, p50: 156, p75: 231, mean: 174 } }) === null && timeInside({}) === null);
 ok("entrances: compared like the rest", entriesVerdict({ entries: 300, prev_entries: 150, first_event: "2026-06-01T00:00:00Z", prev_start: "2026-10-15T00:00:00Z" }) === "up");
 
