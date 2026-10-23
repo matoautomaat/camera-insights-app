@@ -2,7 +2,7 @@ import { compareSince, MIN_SALES, shareInterval, type Verdict } from "@/lib/stat
 
 // Everyone who comes in, counted once (Xin, 22-10-2026: "each person individually, not counting all the time he or
 // she gets caught on different cameras"), as ci_entrances_report gives it: a visit runs from the moment any camera in
-// the place sees a person until a minute without anyone in view, and counts when an entrance camera saw it. A visit of
+// the place sees a person until 90 seconds without anyone in view, and counts when an entrance camera saw it. A visit of
 // 10 minutes or more without a sale is staff (cleaning, refilling) and left out; with a sale it is customers. Its length
 // is the time inside, leaving out visits of 10 minutes or more (mostly several people one after another). Two people inside at
 // the same moment are one visit: matching people by appearance would take biometrics, deliberately not done.

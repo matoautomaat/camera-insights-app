@@ -62,7 +62,7 @@ export const nl: Messages = {
     subtitle: "Elke camera op je UniFi-consoles, en wat je Payter-terminals verkochten.",
     entries: "Binnengekomen",
     entriesLine: "Iedereen die binnenkomt telt één keer, aan de lijn over de deur ({cameras}), hoeveel camera's hem of haar daarna ook zien.",
-    entriesZone: "Een bezoek loopt van het moment dat een camera iemand ziet tot er een minuut niemand meer in beeld is, en telt als de ingangscamera ({cameras}) het zag: iedereen één keer, hoeveel camera's hem of haar ook zien. Twee mensen tegelijk binnen tellen als één bezoek.",
+    entriesZone: "Een bezoek loopt van het moment dat een camera iemand ziet tot er anderhalve minuut niemand meer in beeld is, en telt als de ingangscamera ({cameras}) het zag: iedereen één keer, hoeveel camera's hem of haar ook zien. Twee mensen tegelijk binnen tellen als één bezoek.",
     entriesLineSince: "Sinds {date} telt iedereen die binnenkomt één keer, aan de lijn over de deur ({cameras}). De dagen ervoor zijn geteld uit de persoonsdetecties van de camera, een schatting.",
     perVisitorItems: "Aankopen per bezoeker",
     perVisitorSpent: "Besteed per bezoeker",
