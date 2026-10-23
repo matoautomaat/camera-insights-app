@@ -29,7 +29,34 @@ export type ProtectEvent = {
   score: number | null;
   /** Line crossings only: what Protect says about the crossing itself (which way, which line), never more. */
   lineDetail: LineDetail | null;
+  /** How many people Protect says were in this detection: counts only (peopleHint). */
+  people: PeopleHint;
 };
+
+/**
+ * How many people one detection held, as far as Protect says: Protect makes one detection per camera while anyone is
+ * in view, so two people side by side are one detection. Counted from the pieces Protect lists per object (a small
+ * picture per person, a sub-event per object) and its own count: numbers only, never a picture, id or description.
+ */
+export type PeopleHint = { personThumbnails: number; thumbnails: number; subEvents: number; count: Record<string, number> };
+
+export function peopleHint(raw: Record<string, unknown>): PeopleHint {
+  const metadata = raw.metadata && typeof raw.metadata === "object" && !Array.isArray(raw.metadata) ? (raw.metadata as Record<string, unknown>) : {};
+  const thumbnails = Array.isArray(metadata.detectedThumbnails) ? metadata.detectedThumbnails.filter((t) => t && typeof t === "object") : [];
+  const count: Record<string, number> = {};
+  if (typeof metadata.count === "number" && Number.isFinite(metadata.count)) count.value = metadata.count;
+  else if (metadata.count && typeof metadata.count === "object" && !Array.isArray(metadata.count)) {
+    for (const [key, value] of Object.entries(metadata.count).slice(0, 6)) {
+      if (typeof value === "number" && Number.isFinite(value) && /^\w{1,24}$/.test(key)) count[key] = value;
+    }
+  }
+  return {
+    personThumbnails: thumbnails.filter((t) => (t as { type?: unknown }).type === "person").length,
+    thumbnails: thumbnails.length,
+    subEvents: Array.isArray(raw.smartDetectEvents) ? raw.smartDetectEvents.length : 0,
+    count,
+  };
+}
 
 /** The names Protect gives the parts of a crossing, and the short plain values about direction or line in it. */
 export type LineDetail = { keys: string[]; found: Record<string, string | number | boolean> };
@@ -138,6 +165,7 @@ export function parseProtectEvents(
       endedAt: end === null ? null : new Date(end).toISOString(),
       score: typeof raw.score === "number" && Number.isFinite(raw.score) ? Math.round(raw.score) : null,
       lineDetail: kind === "line" ? lineDetail(raw) : null,
+      people: peopleHint(raw),
     });
   }
   return { events, received: list.length, lastStart };
