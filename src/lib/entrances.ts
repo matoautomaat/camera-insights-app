@@ -1,5 +1,4 @@
-import type { SalesReport } from "@/lib/sales";
-import { compareSince, MIN_SALES, type Verdict } from "@/lib/stats";
+import { compareSince, MIN_SALES, shareInterval, type Verdict } from "@/lib/stats";
 
 // Everyone who comes in, counted once (Xin, 22-10-2026: "each person individually, not counting all the time he or
 // she gets caught on different cameras"), as ci_entrances_report gives it: a visit runs from the moment any camera in
@@ -29,6 +28,27 @@ export type EntrancesReport = {
   staff?: number;
   /** Seconds inside per visit, over the counted visits. */
   stay?: { n: number; p25: number | null; p50: number | null; p75: number | null; mean: number | null };
+  /** The followed terminals a camera of the place looks at: the machines of the place. */
+  machines?: string[];
+  /** Visits during which one of those machines sold something. */
+  bought?: number;
+  /** What those machines sold in the period, from the first camera data on (first_event). */
+  sales?: number;
+  revenue?: number;
+  /** Sales that fell inside a visit; the rest are a camera missing someone or a machine out of view. */
+  sales_seen?: number;
+  /** Per hour of the day, added up over the period: only hours with a visit or a sale. */
+  hours?: HourRow[];
+};
+
+export type HourRow = {
+  hour: number;
+  visits: number;
+  bought: number;
+  sales: number;
+  revenue: number;
+  /** The three most sold selections that hour: counts, not a claim that one really sells better. */
+  top: { serial: string; item_ref: string; units: number }[];
 };
 
 /** Exact only when every entrance camera counts with a line. */
@@ -51,26 +71,44 @@ export function entriesVerdict(report: Pick<EntrancesReport, "entries" | "prev_e
   return compareSince(report.entries, report.prev_entries, report.first_event, report.prev_start);
 }
 
-export type PerVisitor =
-  /** No followed terminal is linked to a camera: nothing sold in this place to divide. */
+export type VisitSales =
+  /** No followed terminal is linked to a camera of the place: nothing to set against the visits. */
   | { state: "none" }
-  /** Fewer than MIN_SALES people or purchases: no average yet. */
-  | { state: "tooFew" }
-  | { state: "ok"; items: number; revenue: number; perPerson: number; spentPerPerson: number };
+  | {
+      state: "ok";
+      visits: number;
+      bought: number;
+      /** Who bought, out of the visits, with its 95% range: only from MIN_SALES visits. */
+      share: { share: number; low: number; high: number } | null;
+      sales: number;
+      revenue: number;
+      /** Purchases and euros per visit: only from MIN_SALES visits and MIN_SALES sales. */
+      perVisit: { items: number; euros: number } | null;
+      /** Sales that fell outside every visit. */
+      unseen: number;
+    };
 
 /**
- * Purchases per person who came in: what the terminals linked to a camera (the machines in this place) sold,
- * divided by the people who came in, over the same hours. Terminals elsewhere on the Payter account never count.
- * Only from MIN_SALES people and MIN_SALES purchases, so one busy hour never makes the average.
+ * Visitors and sales of the place together: how many visits bought something (a sale on one of its machines from 20
+ * seconds before the visit until a minute after), and the purchases per visit. Terminals elsewhere on the Payter
+ * account never count. Shares and averages only once there are enough visits and sales to mean something.
  */
-export function perVisitor(report: Pick<EntrancesReport, "entries">, sales: Pick<SalesReport, "terminals"> | null, placeSerials: string[]): PerVisitor {
-  const place = new Set(placeSerials);
-  const terminals = (sales?.terminals ?? []).filter((t) => place.has(t.serial));
-  if (!terminals.length) return { state: "none" };
-  const items = terminals.reduce((sum, t) => sum + t.units, 0);
-  const revenue = terminals.reduce((sum, t) => sum + t.revenue, 0);
-  if (report.entries < MIN_SALES || items < MIN_SALES) return { state: "tooFew" };
-  return { state: "ok", items, revenue, perPerson: items / report.entries, spentPerPerson: revenue / report.entries };
+export function visitSales(report: EntrancesReport): VisitSales {
+  if (!report.machines?.length) return { state: "none" };
+  const visits = report.entries;
+  const bought = Math.min(report.bought ?? 0, visits);
+  const sales = report.sales ?? 0;
+  const revenue = report.revenue ?? 0;
+  return {
+    state: "ok",
+    visits,
+    bought,
+    share: visits >= MIN_SALES ? { share: bought / visits, ...shareInterval(bought, visits) } : null,
+    sales,
+    revenue,
+    perVisit: visits >= MIN_SALES && sales >= MIN_SALES ? { items: sales / visits, euros: revenue / visits } : null,
+    unseen: Math.max(0, sales - (report.sales_seen ?? sales)),
+  };
 }
 
 /** How long people stay inside: the middle visit and the middle half, only from MIN_SALES visits. */

@@ -9,7 +9,7 @@ import { durationText, fmt } from "@/i18n/format";
 import { getI18n } from "@/i18n/server";
 import { requireLogin } from "@/lib/auth";
 import { DEMO, getCameras, getEntrancesReport, getSalesReport, getSyncStates, getTerminals, getVisitorsReport } from "@/lib/data";
-import { entriesVerdict, entryMethod, lineSinceInPeriod, perVisitor, timeInside } from "@/lib/entrances";
+import { entriesVerdict, entryMethod, lineSinceInPeriod, timeInside, visitSales } from "@/lib/entrances";
 import { payterConfigured } from "@/lib/payter";
 import { salesTotal } from "@/lib/sales";
 import { runSync } from "@/lib/sync";
@@ -38,11 +38,14 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
 
   const method = entries ? entryMethod(entries) : null;
   const lineSince = entries ? lineSinceInPeriod(entries) : null;
-  // The machines in this place: the followed terminals a camera looks at, never the rest of the Payter account.
-  const placeSerials = [...new Set(shown.flatMap((c) => c.terminals))].filter((serial) => followed.some((t) => t.serial === serial));
-  const perPerson = entries ? perVisitor(entries, sales, placeSerials) : null;
   const inside = entries ? timeInside(entries) : null;
-  const placeNames = followed.filter((t) => placeSerials.includes(t.serial)).map((t) => t.label).join(", ");
+  // Visitors and sales of the place: its machines are the followed terminals a camera of it looks at (ci_entrances_report).
+  const visit = entries ? visitSales(entries) : null;
+  const terminalLabel = new Map(terminals.map((t) => [t.serial, t.label]));
+  const machineNames = (entries?.machines ?? []).map((serial) => terminalLabel.get(serial) ?? serial).join(", ");
+  const hours = entries?.hours ?? [];
+  const busiestHour = Math.max(1, ...hours.map((h) => h.visits));
+  const countingSince = entries?.first_event && new Date(entries.first_event) > new Date(entries.cur_start) ? entries.first_event : null;
   const doorNames = entranceCameras.map((c) => c.name).join(", ");
   const money = sales ? salesTotal(sales) : null;
   const compareLabel = m.common.compare[period];
@@ -85,24 +88,15 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
                     f={f}
                   />
                 </div>
-                {(perPerson?.state === "ok" || inside) && (
-                  <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1">
-                    {inside && (
-                      <Stat
-                        label={m.overview.timeInside}
-                        value={durationText(inside.p50, m)}
-                        detail={fmt(m.camera.stayedHint, { low: durationText(inside.p25, m), high: durationText(inside.p75, m) })}
-                      />
-                    )}
-                    {perPerson?.state === "ok" && (
-                      <>
-                        <Stat label={m.overview.perVisitorItems} value={f.number(Math.round(perPerson.perPerson * 100) / 100)} />
-                        <Stat label={m.overview.perVisitorSpent} value={f.euro(perPerson.spentPerPerson)} />
-                      </>
-                    )}
+                {inside && (
+                  <div className="mt-3">
+                    <Stat
+                      label={m.overview.timeInside}
+                      value={durationText(inside.p50, m)}
+                      detail={fmt(m.camera.stayedHint, { low: durationText(inside.p25, m), high: durationText(inside.p75, m) })}
+                    />
                   </div>
                 )}
-                {perPerson?.state === "tooFew" && <p className="mt-3 text-[13px] text-muted">{m.overview.perVisitorTooFew}</p>}
                 <p className="mt-3 text-[12.5px] leading-snug text-muted">
                   {lineSince
                     ? fmt(m.overview.entriesLineSince, { cameras: doorNames, date: f.dayMonth(lineSince) })
@@ -110,9 +104,6 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
                 </p>
                 {(entries.staff ?? 0) > 0 && (
                   <p className="mt-2 text-[12.5px] leading-snug text-muted">{fmt(m.overview.staffLeftOut, { n: f.number(entries.staff ?? 0) })}</p>
-                )}
-                {perPerson && perPerson.state !== "none" && (
-                  <p className="mt-2 text-[12.5px] leading-snug text-muted">{fmt(m.overview.perVisitorHint, { terminals: placeNames })}</p>
                 )}
               </>
             ) : (
@@ -140,6 +131,85 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
             )}
           </section>
         </div>
+
+        {/* Visitors and sales together: who bought, and what sells at which hour. Counts, never a ranking claim. */}
+        {visit && (
+          <Section
+            title={m.overview.visitSales}
+            hint={visit.state === "ok" ? fmt(m.overview.visitSalesHint, { terminals: machineNames }) : undefined}
+          >
+            {visit.state === "none" ? (
+              <div className="card px-5 py-5 text-[14px] text-muted sm:px-6">{m.overview.visitSalesNone}</div>
+            ) : (
+              <div className="card flex flex-col gap-6 px-5 py-5 sm:px-6">
+                <div className="grid grid-cols-2 gap-x-6 gap-y-4 lg:grid-cols-4">
+                  <Stat label={m.overview.visitors} value={f.number(visit.visits)} />
+                  <Stat
+                    label={m.overview.boughtSomething}
+                    value={fmt(m.overview.boughtOf, { n: f.number(visit.bought), total: f.number(visit.visits) })}
+                    detail={
+                      visit.share
+                        ? `${f.percent(visit.share.share)} · ${fmt(m.camera.boughtRange, { low: f.percent(visit.share.low), high: f.percent(visit.share.high) })}`
+                        : `${m.overview.boughtNothing}: ${f.number(visit.visits - visit.bought)}`
+                    }
+                  />
+                  <Stat label={m.overview.salesCount} value={f.number(visit.sales)} detail={f.euro(visit.revenue)} />
+                  <Stat
+                    label={m.overview.perVisitorItems}
+                    value={visit.perVisit ? f.number(Math.round(visit.perVisit.items * 100) / 100) : "–"}
+                    detail={visit.perVisit ? `${m.overview.perVisitorSpent}: ${f.euro(visit.perVisit.euros)}` : m.overview.perVisitorTooFew}
+                  />
+                </div>
+                {(visit.unseen > 0 || countingSince) && (
+                  <div className="flex flex-col gap-1 text-[12.5px] leading-snug text-muted">
+                    {countingSince && <p>{fmt(m.overview.since, { date: f.dayMonth(countingSince) })}</p>}
+                    {visit.unseen > 0 && <p>{fmt(m.overview.unseen, { n: f.number(visit.unseen) })}</p>}
+                  </div>
+                )}
+                <div>
+                  <h3 className="text-[15px] font-semibold">{m.overview.perHour}</h3>
+                  <p className="text-[12.5px] text-muted">{m.overview.perHourHint}</p>
+                  {hours.length === 0 ? (
+                    <p className="mt-3 text-[14px] text-muted">{m.overview.noHours}</p>
+                  ) : (
+                    <ul className="mt-2 flex flex-col divide-y divide-line">
+                      {hours.map((h) => (
+                        <li key={h.hour} className="grid grid-cols-[3.25rem_1fr] gap-3 py-2.5">
+                          <span className="text-[14px] font-semibold tabular-nums">{String(h.hour).padStart(2, "0")}:00</span>
+                          <div className="min-w-0">
+                            <p className="text-[14px]">
+                              {fmt(m.overview.hourLine, { visitors: f.number(h.visits), bought: f.number(h.bought), sales: f.number(h.sales) })}
+                            </p>
+                            {/* The bar is the visitors of that hour against the busiest hour; its dark part bought something. */}
+                            <span className="mt-1.5 block h-2 overflow-hidden rounded-full bg-surface" aria-hidden>
+                              <span className="flex h-full rounded-full bg-bar" style={{ width: `${(h.visits / busiestHour) * 100}%` }}>
+                                <span className="h-full rounded-full bg-bar-strong" style={{ width: h.visits > 0 ? `${(Math.min(h.bought, h.visits) / h.visits) * 100}%` : "0%" }} />
+                              </span>
+                            </span>
+                            {h.top.length > 0 && (
+                              <p className="mt-1.5 text-[12.5px] leading-snug text-muted">
+                                {fmt(m.overview.topSold, {
+                                  list: h.top
+                                    .map((item) =>
+                                      fmt(m.overview.timesSold, {
+                                        name: `${terminalLabel.get(item.serial) ?? item.serial} · ${item.item_ref === "?" ? m.sales.noSelection : fmt(m.sales.selection, { ref: item.item_ref })}`,
+                                        n: f.number(item.units),
+                                      }),
+                                    )
+                                    .join(", "),
+                                })}
+                              </p>
+                            )}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
+          </Section>
+        )}
 
         <Section
           title={m.overview.cameras}
