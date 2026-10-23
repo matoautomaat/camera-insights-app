@@ -36,8 +36,8 @@ export type LineDetail = { keys: string[]; found: Record<string, string | number
 
 /** Paths that can only hold pictures or descriptions of a person: never read. */
 const NEVER = /thumb|image|crop|face|desc|plate|attribute|heatmap|snapshot|name|user|color|colour|age|gender|cloth/i;
-/** Paths about the crossing itself. */
-const ABOUT_CROSSING = /direct|cross|line|side|enter|exit|bound|zone/i;
+/** Paths about the crossing itself, and Protect's own count of the line (metadata.count). */
+const ABOUT_CROSSING = /direct|cross|line|side|enter|exit|bound|zone|count/i;
 
 /**
  * Whether Protect says which way someone crossed a line, without knowing yet how it says it: the key names in the

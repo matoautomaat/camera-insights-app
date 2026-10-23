@@ -36,11 +36,12 @@ const crossing = parseProtectEvents(
       lineCrossing: { direction: "IN", lineId: "abc123", label: "a woman walking in" },
       detectedThumbnails: [{ croppedId: "t1", type: "person", attributes: { color: "red", direction: "left" } }],
       zonesStatus: { "1": { level: 3 } },
+      count: { in: 2, out: 3 },
     },
   }],
   now,
 ).events[0].lineDetail;
-ok("events: a line crossing keeps which way and which line", crossing?.found["metadata.lineCrossing.direction"] === "IN" && crossing?.found["metadata.lineCrossing.lineId"] === "abc123" && crossing?.keys.join() === "lineCrossing,zonesStatus");
+ok("events: a line crossing keeps which way and which line", crossing?.found["metadata.lineCrossing.direction"] === "IN" && crossing?.found["metadata.lineCrossing.lineId"] === "abc123" && crossing?.keys.join() === "count,lineCrossing,zonesStatus" && crossing?.found["metadata.count.in"] === 2 && crossing?.found["metadata.count.out"] === 3);
 ok("events: a line crossing keeps no picture, description or person", crossing !== null && !/red|woman|t1|e-123|croppedId|left/.test(JSON.stringify(crossing)));
 ok("events: camera as object", parsed.events[1].cameraId === "cam2");
 ok("events: an end before the start is no end", parsed.events[2].endedAt === null);
