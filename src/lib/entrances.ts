@@ -2,12 +2,13 @@ import type { SalesReport } from "@/lib/sales";
 import { compareSince, MIN_SALES, type Verdict } from "@/lib/stats";
 
 // Everyone who comes in, counted once (Xin, 22-10-2026: "each person individually, not counting all the time he or
-// she gets caught on different cameras"). Only the cameras marked as entrance count, as ci_entrances_report gives it:
-// a line across the door in UniFi Protect when a camera has one (each crossing is one person coming in), otherwise
-// its person detections at the door (an estimate). The same person on two cameras is never matched: that would take
-// biometrics. No server imports: the pages and the tests share it.
+// she gets caught on different cameras"), as ci_entrances_report gives it: a visit runs from the moment any camera in
+// the place sees a person until a minute without anyone in view, and counts when an entrance camera saw it. A visit of
+// 10 minutes or more is staff (cleaning, refilling) and left out. Its length is the time inside. Two people inside at
+// the same moment are one visit: matching people by appearance would take biometrics, deliberately not done.
+// No server imports: the pages and the tests share it.
 
-/** How a camera counts: "line" a line across the door in Protect (exact), "zone" its detections (an estimate). */
+/** How the entrance counts: "line" a line across the door in Protect, "zone" visits seen by the cameras (above). */
 export type EntryMethod = "line" | "zone";
 
 export type EntrancesReport = {
@@ -24,6 +25,10 @@ export type EntrancesReport = {
   by_day: { day: string; visits: number }[];
   by_hour: { hour: number; visits: number }[];
   by_weekday: { weekday: number; visits: number }[];
+  /** Visits of 10 minutes or more, left out as staff. */
+  staff?: number;
+  /** Seconds inside per visit, over the counted visits. */
+  stay?: { n: number; p25: number | null; p50: number | null; p75: number | null; mean: number | null };
 };
 
 /** Exact only when every entrance camera counts with a line. */
@@ -66,4 +71,11 @@ export function perVisitor(report: Pick<EntrancesReport, "entries">, sales: Pick
   const revenue = terminals.reduce((sum, t) => sum + t.revenue, 0);
   if (report.entries < MIN_SALES || items < MIN_SALES) return { state: "tooFew" };
   return { state: "ok", items, revenue, perPerson: items / report.entries, spentPerPerson: revenue / report.entries };
+}
+
+/** How long people stay inside: the middle visit and the middle half, only from MIN_SALES visits. */
+export function timeInside(report: Pick<EntrancesReport, "stay">): { n: number; p25: number; p50: number; p75: number } | null {
+  const stay = report.stay;
+  if (!stay || stay.n < MIN_SALES || stay.p25 === null || stay.p50 === null || stay.p75 === null) return null;
+  return { n: stay.n, p25: stay.p25, p50: stay.p50, p75: stay.p75 };
 }

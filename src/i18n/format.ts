@@ -1,12 +1,20 @@
 // Numbers, money and dates the Belgian way (nl-BE), or British English, always on Brussels time.
 // No server imports: the server and the browser both use it.
 
+import type { Messages } from "@/i18n/en";
+
 export type Locale = "nl" | "en";
 export const LOCALES: Locale[] = ["nl", "en"];
 export const LOCALE_COOKIE = "ci-lang";
 const TIME_ZONE = "Europe/Brussels";
 
 export const intlLocale = (locale: Locale) => (locale === "nl" ? "nl-BE" : "en-GB");
+
+/** A stay in seconds as "38 s" or "2 min 36 s". */
+export function durationText(seconds: number, m: Messages): string {
+  const whole = Math.round(seconds);
+  return whole < 60 ? fmt(m.common.seconds, { s: whole }) : fmt(m.common.minutes, { m: Math.floor(whole / 60), s: whole % 60 });
+}
 
 /** "{n} a day" with its values filled in. */
 export function fmt(template: string, values: Record<string, string | number>): string {

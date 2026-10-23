@@ -6,7 +6,7 @@ import { eventsQuery, parseProtectEvents } from "@/lib/protect-events";
 import { salesTotal, salesVerdict, type SalesReport, type TerminalSales } from "@/lib/sales";
 import { sessionExpiry, shouldRenew, signSession } from "@/lib/session";
 import { busiestWeekday, compareCounts, compareSince, periodDays, shareInterval, standoutHours, weekdayStats } from "@/lib/stats";
-import { entriesVerdict, entryMethod, lineSinceInPeriod, perVisitor } from "@/lib/entrances";
+import { entriesVerdict, entryMethod, lineSinceInPeriod, perVisitor, timeInside } from "@/lib/entrances";
 import { buying, cameraCheck, middleStay, visitDays, type CameraVisitors, type VisitorsReport } from "@/lib/visitors";
 
 let failed = 0;
@@ -126,6 +126,7 @@ const placeSales = { terminals: [{ serial: "T1", units: 60, revenue: 180 }, { se
 const pv = perVisitor({ entries: 200 }, placeSales, ["T1", "T2"]);
 ok("entrances: purchases per visitor from this place's machines only", pv.state === "ok" && pv.items === 100 && pv.perPerson === 0.5 && pv.spentPerPerson === 1.4);
 ok("entrances: no average per visitor under 30 people or purchases", perVisitor({ entries: 20 }, placeSales, ["T1"]).state === "tooFew" && perVisitor({ entries: 200 }, placeSales, []).state === "none");
+ok("entrances: time inside from 30 visits, the middle and the middle half", timeInside({ stay: { n: 31, p25: 65, p50: 156, p75: 231, mean: 174 } })?.p50 === 156 && timeInside({ stay: { n: 12, p25: 65, p50: 156, p75: 231, mean: 174 } }) === null && timeInside({}) === null);
 ok("entrances: compared like the rest", entriesVerdict({ entries: 300, prev_entries: 150, first_event: "2026-06-01T00:00:00Z", prev_start: "2026-10-15T00:00:00Z" }) === "up");
 
 // ── Sales ─────────────────────────────────────────────────────────────────────
