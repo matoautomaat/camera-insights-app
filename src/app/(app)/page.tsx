@@ -5,11 +5,11 @@ import { CameraWall } from "@/components/camera-wall";
 import { FetchNow } from "@/components/fetch-now";
 import { SyncLine } from "@/components/sync-line";
 import { Change, Dot, Empty, PageHeader, PeriodLinks, Section, Stat } from "@/components/ui";
-import { fmt } from "@/i18n/format";
+import { durationText, fmt } from "@/i18n/format";
 import { getI18n } from "@/i18n/server";
 import { requireLogin } from "@/lib/auth";
 import { DEMO, getCameras, getEntrancesReport, getSalesReport, getSyncStates, getTerminals, getVisitorsReport } from "@/lib/data";
-import { entriesVerdict, entryMethod, lineSinceInPeriod, perVisitor } from "@/lib/entrances";
+import { entriesVerdict, entryMethod, lineSinceInPeriod, perVisitor, timeInside } from "@/lib/entrances";
 import { payterConfigured } from "@/lib/payter";
 import { salesTotal } from "@/lib/sales";
 import { runSync } from "@/lib/sync";
@@ -41,6 +41,7 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
   // The machines in this place: the followed terminals a camera looks at, never the rest of the Payter account.
   const placeSerials = [...new Set(shown.flatMap((c) => c.terminals))].filter((serial) => followed.some((t) => t.serial === serial));
   const perPerson = entries ? perVisitor(entries, sales, placeSerials) : null;
+  const inside = entries ? timeInside(entries) : null;
   const placeNames = followed.filter((t) => placeSerials.includes(t.serial)).map((t) => t.label).join(", ");
   const doorNames = entranceCameras.map((c) => c.name).join(", ");
   const money = sales ? salesTotal(sales) : null;
@@ -84,10 +85,21 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
                     f={f}
                   />
                 </div>
-                {perPerson?.state === "ok" && (
+                {(perPerson?.state === "ok" || inside) && (
                   <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1">
-                    <Stat label={m.overview.perVisitorItems} value={f.number(Math.round(perPerson.perPerson * 100) / 100)} />
-                    <Stat label={m.overview.perVisitorSpent} value={f.euro(perPerson.spentPerPerson)} />
+                    {inside && (
+                      <Stat
+                        label={m.overview.timeInside}
+                        value={durationText(inside.p50, m)}
+                        detail={fmt(m.camera.stayedHint, { low: durationText(inside.p25, m), high: durationText(inside.p75, m) })}
+                      />
+                    )}
+                    {perPerson?.state === "ok" && (
+                      <>
+                        <Stat label={m.overview.perVisitorItems} value={f.number(Math.round(perPerson.perPerson * 100) / 100)} />
+                        <Stat label={m.overview.perVisitorSpent} value={f.euro(perPerson.spentPerPerson)} />
+                      </>
+                    )}
                   </div>
                 )}
                 {perPerson?.state === "tooFew" && <p className="mt-3 text-[13px] text-muted">{m.overview.perVisitorTooFew}</p>}
@@ -96,6 +108,9 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
                     ? fmt(m.overview.entriesLineSince, { cameras: doorNames, date: f.dayMonth(lineSince) })
                     : fmt(method === "line" ? m.overview.entriesLine : m.overview.entriesZone, { cameras: doorNames })}
                 </p>
+                {(entries.staff ?? 0) > 0 && (
+                  <p className="mt-2 text-[12.5px] leading-snug text-muted">{fmt(m.overview.staffLeftOut, { n: f.number(entries.staff ?? 0) })}</p>
+                )}
                 {perPerson && perPerson.state !== "none" && (
                   <p className="mt-2 text-[12.5px] leading-snug text-muted">{fmt(m.overview.perVisitorHint, { terminals: placeNames })}</p>
                 )}

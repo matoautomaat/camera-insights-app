@@ -125,7 +125,7 @@ export function sampleVisitors(cameraIds: string[], days: number): VisitorsRepor
   return { cur_start: w.cur_start, cur_end: w.cur_end, prev_start: w.prev_start, timezone: w.timezone, cameras };
 }
 
-/** The people coming in at the first camera: about a third of all detections, as a door sees each person once. */
+/** The visits through the first camera: fewer than its detections, as one visit is seen several times. */
 export function sampleEntrances(cameraIds: string[], days: number): EntrancesReport {
   const visitors = sampleVisitors(cameraIds, days);
   const scale = (n: number) => Math.round(n * 0.85);
@@ -142,6 +142,8 @@ export function sampleEntrances(cameraIds: string[], days: number): EntrancesRep
     by_day: one.by_day.map((d) => ({ day: d.day, visits: scale(d.visits) })),
     by_hour: one.by_hour.map((h) => ({ hour: h.hour, visits: scale(h.visits) })),
     by_weekday: one.by_weekday.map((w) => ({ weekday: w.weekday, visits: scale(w.visits) })),
+    staff: Math.min(days, 5),
+    stay: { n: scale(one.visits), p25: 68, p50: 151, p75: 236, mean: 172 },
   };
 }
 

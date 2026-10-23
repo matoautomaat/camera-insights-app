@@ -5,7 +5,7 @@ import { CameraViewer } from "@/components/camera-viewer";
 import { FetchNow } from "@/components/fetch-now";
 import { BarList, Bars, Change, Dot, Empty, HowToRead, PageHeader, Panel, PeriodLinks, Stat } from "@/components/ui";
 import type { Messages } from "@/i18n/en";
-import { fmt } from "@/i18n/format";
+import { durationText, fmt } from "@/i18n/format";
 import { getI18n } from "@/i18n/server";
 import { requireLogin } from "@/lib/auth";
 import { DEMO, getCamera, getTerminals, getVisitorsReport } from "@/lib/data";
@@ -23,11 +23,6 @@ const clock = (hour: number) => `${String(hour % 24).padStart(2, "0")}:00`;
 const oneDecimal = (value: number) => Math.round(value * 10) / 10;
 
 /** "45 s" or "1 min 20 s". */
-function stayText(seconds: number, m: Messages) {
-  const whole = Math.round(seconds);
-  return whole < 60 ? fmt(m.common.seconds, { s: whole }) : fmt(m.common.minutes, { m: Math.floor(whole / 60), s: whole % 60 });
-}
-
 export default async function CameraPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ period?: string }> }) {
   await requireLogin();
   const { m, f } = await getI18n();
@@ -155,8 +150,8 @@ function CameraFigures({
           <Stat label={m.camera.perDay} value={f.number(oneDecimal(camera.visits / Math.max(days.length, 1)))} />
           <Stat
             label={m.camera.stayed}
-            value={stay ? stayText(stay.p50, m) : "–"}
-            detail={stay ? fmt(m.camera.stayedHint, { low: stayText(stay.p25, m), high: stayText(stay.p75, m) }) : m.camera.tooFew}
+            value={stay ? durationText(stay.p50, m) : "–"}
+            detail={stay ? fmt(m.camera.stayedHint, { low: durationText(stay.p25, m), high: durationText(stay.p75, m) }) : m.camera.tooFew}
           />
           <Stat label={m.camera.bought} value={buy.state === "ok" ? f.percent(buy.share) : "–"} detail={boughtDetail} />
           <Stat
