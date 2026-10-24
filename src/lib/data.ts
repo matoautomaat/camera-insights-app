@@ -79,19 +79,19 @@ export async function rememberNoFullHd(consoleId: string, cameraId: string): Pro
   if (error) console.error("full_hd not saved", { error: error.message });
 }
 
-export async function getVisitorsReport(cameraIds: string[], days: number): Promise<VisitorsReport | null> {
+export async function getVisitorsReport(cameraIds: string[], days: number, daysBack = 0): Promise<VisitorsReport | null> {
   if (!cameraIds.length) return null;
   if (DEMO) return sampleVisitors(cameraIds, days);
-  const { data, error } = await db().rpc("ci_visitors_report", { camera_ids: cameraIds, period_days: days, tz: TIME_ZONE });
+  const { data, error } = await db().rpc("ci_visitors_report", { camera_ids: cameraIds, period_days: days, tz: TIME_ZONE, days_back: daysBack });
   if (error) throw new Error(error.message);
   return data as VisitorsReport;
 }
 
 /** Everyone who came in through the entrance cameras, each once; null without an entrance camera. */
-export async function getEntrancesReport(cameraIds: string[], days: number): Promise<EntrancesReport | null> {
+export async function getEntrancesReport(cameraIds: string[], days: number, daysBack = 0): Promise<EntrancesReport | null> {
   if (!cameraIds.length) return null;
   if (DEMO) return sampleEntrances(cameraIds, days);
-  const { data, error } = await db().rpc("ci_entrances_report", { camera_ids: cameraIds, period_days: days, tz: TIME_ZONE });
+  const { data, error } = await db().rpc("ci_entrances_report", { camera_ids: cameraIds, period_days: days, tz: TIME_ZONE, days_back: daysBack });
   if (error) throw new Error(error.message);
   return data as EntrancesReport;
 }
@@ -138,10 +138,10 @@ export const getTerminals = cache(async (): Promise<TerminalInfo[]> => {
     .sort((a, b) => Number(b.followed) - Number(a.followed) || a.label.localeCompare(b.label));
 });
 
-export async function getSalesReport(serials: string[], days: number): Promise<SalesReport | null> {
+export async function getSalesReport(serials: string[], days: number, daysBack = 0): Promise<SalesReport | null> {
   if (!serials.length) return null;
   if (DEMO) return sampleSales(serials, days);
-  const { data, error } = await db().rpc("ci_sales_report", { serials, period_days: days, tz: TIME_ZONE });
+  const { data, error } = await db().rpc("ci_sales_report", { serials, period_days: days, tz: TIME_ZONE, days_back: daysBack });
   if (error) throw new Error(error.message);
   return data as SalesReport;
 }

@@ -25,9 +25,10 @@ export const nl: Messages = {
     notSetUp: "Er is nog geen wachtwoord: zet APP_PASSWORD in Vercel.",
   },
   common: {
-    periods: { today: "Vandaag", week: "7 dagen", month: "4 weken", quarter: "3 maanden" },
+    periods: { today: "Vandaag", yesterday: "Gisteren", week: "7 dagen", month: "4 weken", quarter: "3 maanden" },
     compare: {
       today: "tegenover gisteren tot nu",
+      yesterday: "tegenover eergisteren",
       week: "tegenover de 7 dagen ervoor",
       month: "tegenover de 4 weken ervoor",
       quarter: "tegenover de 3 maanden ervoor",

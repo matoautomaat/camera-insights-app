@@ -14,7 +14,7 @@ import { payterConfigured } from "@/lib/payter";
 import { salesTotal } from "@/lib/sales";
 import { runSync } from "@/lib/sync";
 import { unifiConfigured } from "@/lib/unifi";
-import { cameraCheck, parsePeriod, PERIODS, visitsVerdict } from "@/lib/visitors";
+import { cameraCheck, DAYS_BACK, parsePeriod, PERIODS, visitsVerdict } from "@/lib/visitors";
 
 /** Reading UniFi and Payter after the page can take a few calls of a few seconds each. */
 export const maxDuration = 60;
@@ -24,14 +24,15 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
   const { m, f } = await getI18n();
   const period = parsePeriod((await searchParams).period, "today");
   const days = PERIODS[period];
+  const back = DAYS_BACK[period];
   const [cameras, terminals, sync] = await Promise.all([getCameras(), getTerminals(), getSyncStates()]);
   const shown = cameras.filter((c) => !c.hidden);
   const followed = terminals.filter((t) => t.followed);
   const entranceCameras = shown.filter((c) => c.entrance);
   const [visitors, sales, entries] = await Promise.all([
-    getVisitorsReport(shown.map((c) => c.cameraId), days),
-    getSalesReport(followed.map((t) => t.serial), days),
-    getEntrancesReport(entranceCameras.map((c) => c.cameraId), days),
+    getVisitorsReport(shown.map((c) => c.cameraId), days, back),
+    getSalesReport(followed.map((t) => t.serial), days, back),
+    getEntrancesReport(entranceCameras.map((c) => c.cameraId), days, back),
   ]);
   // Whatever is due is read after the page, never before it.
   if (!DEMO) after(() => runSync());

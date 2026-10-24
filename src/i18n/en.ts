@@ -23,9 +23,10 @@ export const en = {
     notSetUp: "No password is set yet: add APP_PASSWORD in Vercel.",
   },
   common: {
-    periods: { today: "Today", week: "7 days", month: "4 weeks", quarter: "3 months" },
+    periods: { today: "Today", yesterday: "Yesterday", week: "7 days", month: "4 weeks", quarter: "3 months" },
     compare: {
       today: "compared to yesterday until now",
+      yesterday: "compared to the day before",
       week: "compared to the 7 days before",
       month: "compared to the 4 weeks before",
       quarter: "compared to the 3 months before",
