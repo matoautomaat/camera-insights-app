@@ -23,9 +23,10 @@ export const en = {
     notSetUp: "No password is set yet: add APP_PASSWORD in Vercel.",
   },
   common: {
-    periods: { today: "Today", week: "7 days", month: "4 weeks", quarter: "3 months" },
+    periods: { today: "Today", yesterday: "Yesterday", week: "7 days", month: "4 weeks", quarter: "3 months" },
     compare: {
       today: "compared to yesterday until now",
+      yesterday: "compared to the day before",
       week: "compared to the 7 days before",
       month: "compared to the 4 weeks before",
       quarter: "compared to the 3 months before",
@@ -60,7 +61,7 @@ export const en = {
     subtitle: "Every camera on your UniFi consoles, and what your Payter terminals sold.",
     entries: "Came in",
     entriesLine: "Everyone who walks in counts once, at the line across the door ({cameras}), however many cameras see them after.",
-    entriesZone: "A visit runs from the moment any camera sees someone until nobody has been in view for a minute, and counts when the entrance camera ({cameras}) saw it: everyone once, however many cameras see them. Two people inside at the same moment count as one visit.",
+    entriesZone: "A visit runs from the moment any camera sees someone until nobody has been in view for a minute and a half, and counts when the entrance camera ({cameras}) saw it: everyone once, however many cameras see them. Two people inside at the same moment count as one visit.",
     entriesLineSince: "Since {date} everyone who walks in counts once, at the line across the door ({cameras}). The days before were counted from the camera's person detections, an estimate.",
     perVisitorItems: "Purchases per visitor",
     perVisitorSpent: "Spent per visitor",

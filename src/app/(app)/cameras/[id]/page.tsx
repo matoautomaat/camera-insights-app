@@ -10,7 +10,7 @@ import { getI18n } from "@/i18n/server";
 import { requireLogin } from "@/lib/auth";
 import { DEMO, getCamera, getTerminals, getVisitorsReport } from "@/lib/data";
 import { runSync } from "@/lib/sync";
-import { buying, cameraCheck, hourProfile, middleStay, parsePeriod, PERIODS, visitDays, visitsVerdict, weekdayProfile } from "@/lib/visitors";
+import { buying, cameraCheck, DAYS_BACK, hourProfile, middleStay, parsePeriod, PERIODS, visitDays, visitsVerdict, weekdayProfile } from "@/lib/visitors";
 
 export const maxDuration = 60;
 
@@ -30,7 +30,7 @@ export default async function CameraPage({ params, searchParams }: { params: Pro
   const period = parsePeriod((await searchParams).period, "today");
   const camera = await getCamera(id);
   if (!camera) notFound();
-  const [report, terminals] = await Promise.all([getVisitorsReport([camera.cameraId], PERIODS[period]), getTerminals()]);
+  const [report, terminals] = await Promise.all([getVisitorsReport([camera.cameraId], PERIODS[period], DAYS_BACK[period]), getTerminals()]);
   if (!DEMO) after(() => runSync());
 
   const seen = report?.cameras[0];

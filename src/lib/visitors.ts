@@ -54,8 +54,11 @@ export type VisitorsReport = {
 };
 
 /** The periods the pages offer, in days up to and including today. Each is compared with the same length before it. */
-export const PERIODS = { today: 1, week: 7, month: 28, quarter: 91 } as const;
+export const PERIODS = { today: 1, yesterday: 1, week: 7, month: 28, quarter: 91 } as const;
 export type PeriodKey = keyof typeof PERIODS;
+
+/** How many days before today a period ends: yesterday is the whole of yesterday, against the day before. */
+export const DAYS_BACK: Record<PeriodKey, number> = { today: 0, yesterday: 1, week: 0, month: 0, quarter: 0 };
 
 export function parsePeriod(value: string | undefined, fallback: PeriodKey = "month"): PeriodKey {
   return value && value in PERIODS ? (value as PeriodKey) : fallback;

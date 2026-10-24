@@ -12,7 +12,7 @@ import { isSalesSource, payterConfigured } from "@/lib/payter";
 import { salesDays, salesHours, salesTotal, salesVerdict, salesWeekdays, stillReadingUntil, type TerminalSales } from "@/lib/sales";
 import { MIN_WEEKS, weekdayStats, busiestWeekday } from "@/lib/stats";
 import { runSync } from "@/lib/sync";
-import { parsePeriod, PERIODS, type PeriodKey } from "@/lib/visitors";
+import { DAYS_BACK, parsePeriod, PERIODS, type PeriodKey } from "@/lib/visitors";
 
 export const maxDuration = 60;
 
@@ -32,7 +32,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
   const [terminals, cameras, sync] = await Promise.all([getTerminals(), getCameras(), getSyncStates()]);
   const followed = terminals.filter((t) => t.followed);
   const chosen = followed.find((t) => t.serial === query.terminal) ?? null;
-  const report = await getSalesReport(chosen ? [chosen.serial] : followed.map((t) => t.serial), PERIODS[period]);
+  const report = await getSalesReport(chosen ? [chosen.serial] : followed.map((t) => t.serial), PERIODS[period], DAYS_BACK[period]);
   if (!DEMO) after(() => runSync());
 
   const href = (p: PeriodKey, terminal: string | null) => {
