@@ -56,6 +56,18 @@ export function compareMoneySince(
   return (verdict === "up" && revenue > previousRevenue) || (verdict === "down" && revenue < previousRevenue) ? verdict : "noise";
 }
 
+/**
+ * A count over a short stretch against the long stretch before it, k = short length / long length: the short count
+ * is set against what the long one predicts for it, both with the measured dispersion. Too few when the long stretch
+ * has under MIN_SALES or predicts under 8 for the short one: then a quiet spell is never a warning.
+ */
+export function compareRate(current: number, base: number, k: number): Verdict {
+  const expected = base * k;
+  if (base < MIN_SALES || expected < 8) return "tooFew";
+  const z = (current - expected) / Math.sqrt(DISPERSION * (current + k * k * base));
+  return z >= Z95 ? "up" : z <= -Z95 ? "down" : "noise";
+}
+
 /** The smallest relative change that counts as real when both periods had about n. */
 export function detectableChange(n: number): number {
   return (Z95 * Math.sqrt(DISPERSION * 2 * n)) / n;

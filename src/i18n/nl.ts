@@ -203,6 +203,12 @@ export const nl: Messages = {
     catchingUp: "De geschiedenis van Payter is ingelezen tot {date}: oudere dagen vullen zich de volgende keren aan.",
     camera: "Camera: {name}",
   },
+  alerts: {
+    title: "Verkoopt veel minder dan gewoonlijk",
+    line: "{name}: {recent} verkocht in de laatste 2 dagen, normaal ongeveer {expected}.",
+    lastSale: "laatste verkoop {time}",
+    hint: "Kijk of hij leeg is, een storing heeft of de betaalterminal werkt. Alleen getoond als de daling groter is dan de gewone schommeling, tegenover de 4 weken ervoor.",
+  },
   setup: {
     title: "De app bereikt zijn databank niet",
     missing: "SUPABASE_URL of SUPABASE_SERVICE_ROLE_KEY staat niet in Vercel (Settings → Environment Variables). Voeg ze toe en rol opnieuw uit.",
