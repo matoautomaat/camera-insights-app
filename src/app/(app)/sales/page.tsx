@@ -2,12 +2,14 @@ import Link from "next/link";
 import { after } from "next/server";
 import { Receipt } from "lucide-react";
 import { FetchNow } from "@/components/fetch-now";
+import { SalesDrops } from "@/components/sales-drops";
 import { SyncLine } from "@/components/sync-line";
 import { BarList, Bars, Change, Empty, PageHeader, Panel, PeriodLinks, Stat } from "@/components/ui";
 import { fmt } from "@/i18n/format";
 import { getI18n } from "@/i18n/server";
 import { requireLogin } from "@/lib/auth";
-import { DEMO, getCameras, getSalesReport, getSyncStates, getTerminals } from "@/lib/data";
+import { salesDrops } from "@/lib/alerts";
+import { DEMO, getCameras, getMachinePace, getSalesReport, getSyncStates, getTerminals } from "@/lib/data";
 import { isSalesSource, payterConfigured } from "@/lib/payter";
 import { salesDays, salesHours, salesTotal, salesVerdict, salesWeekdays, stillReadingUntil, type TerminalSales } from "@/lib/sales";
 import { MIN_WEEKS, weekdayStats, busiestWeekday } from "@/lib/stats";
@@ -32,7 +34,10 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
   const [terminals, cameras, sync] = await Promise.all([getTerminals(), getCameras(), getSyncStates()]);
   const followed = terminals.filter((t) => t.followed);
   const chosen = followed.find((t) => t.serial === query.terminal) ?? null;
-  const report = await getSalesReport(chosen ? [chosen.serial] : followed.map((t) => t.serial), PERIODS[period], DAYS_BACK[period]);
+  const [report, pace] = await Promise.all([
+    getSalesReport(chosen ? [chosen.serial] : followed.map((t) => t.serial), PERIODS[period], DAYS_BACK[period]),
+    getMachinePace(followed.map((t) => t.serial)),
+  ]);
   if (!DEMO) after(() => runSync());
 
   const href = (p: PeriodKey, terminal: string | null) => {
@@ -76,6 +81,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
         <Empty title={m.sales.noTerminals} hint={m.sales.noTerminalsHint} icon={<Receipt className="size-5" />} />
       ) : (
         <div className="flex flex-col gap-6">
+          <SalesDrops drops={salesDrops(pace)} names={new Map(terminals.map((t) => [t.serial, t.label]))} m={m} f={f} />
           <PeriodLinks hrefFor={(key) => href(key, chosen?.serial ?? null)} current={period} labels={m.common.periods} />
           {followed.length > 1 && (
             <nav className="flex flex-wrap gap-1.5" aria-label={m.settings.terminals}>

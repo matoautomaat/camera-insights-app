@@ -2,9 +2,10 @@ import { cache } from "react";
 import { db, TIME_ZONE } from "@/lib/db";
 import { DEMO } from "@/lib/demo";
 import { terminalOnline } from "@/lib/payter";
+import type { MachinePace } from "@/lib/alerts";
 import type { EntrancesReport } from "@/lib/entrances";
 import type { SalesReport } from "@/lib/sales";
-import { sampleCameras, sampleEntrances, sampleSales, sampleSyncStates, sampleTerminals, sampleVisitors } from "@/lib/sample";
+import { sampleCameras, sampleEntrances, samplePace, sampleSales, sampleSyncStates, sampleTerminals, sampleVisitors } from "@/lib/sample";
 import { readSyncStates, type SyncState } from "@/lib/sync";
 import type { VisitorsReport } from "@/lib/visitors";
 
@@ -144,6 +145,15 @@ export async function getSalesReport(serials: string[], days: number, daysBack =
   const { data, error } = await db().rpc("ci_sales_report", { serials, period_days: days, tz: TIME_ZONE, days_back: daysBack });
   if (error) throw new Error(error.message);
   return data as SalesReport;
+}
+
+/** Each terminal's sales lately against the four weeks before (ci_machine_pace). */
+export async function getMachinePace(serials: string[]): Promise<MachinePace[]> {
+  if (!serials.length) return [];
+  if (DEMO) return samplePace(serials);
+  const { data, error } = await db().rpc("ci_machine_pace", { serials });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as MachinePace[];
 }
 
 export async function getSyncStates(): Promise<SyncState[]> {

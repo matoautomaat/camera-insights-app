@@ -1,3 +1,4 @@
+import type { MachinePace } from "@/lib/alerts";
 import type { CameraInfo, TerminalInfo } from "@/lib/data";
 import type { EntrancesReport } from "@/lib/entrances";
 import type { SalesReport, TerminalSales } from "@/lib/sales";
@@ -206,6 +207,17 @@ export function sampleSales(serials: string[], days: number): SalesReport {
     };
   });
   return { cur_start: w.cur_start, cur_end: w.cur_end, prev_start: w.prev_start, timezone: w.timezone, terminals };
+}
+
+/** The first terminal stopped selling two days ago: the warning shows. */
+export function samplePace(serials: string[]): MachinePace[] {
+  return serials.map((serial, i) => ({
+    serial,
+    recent: i === 0 ? 4 : [60, 36, 18][i] ?? 10,
+    base: [32, 18, 9][i] * 28 || 280,
+    base_days: 28,
+    last_sale: new Date(Date.now() - (i === 0 ? 20 : 1) * 3_600_000).toISOString(),
+  }));
 }
 
 export function sampleSyncStates(): SyncState[] {

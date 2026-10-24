@@ -201,6 +201,12 @@ export const en = {
     catchingUp: "Still reading Payter's history up to {date}: older days fill in over the next runs.",
     camera: "Camera: {name}",
   },
+  alerts: {
+    title: "Selling far less than usual",
+    line: "{name}: {recent} sold in the last 2 days, usually about {expected}.",
+    lastSale: "last sale {time}",
+    hint: "Check whether it is empty, has a fault, or its payment terminal works. Shown only when the drop is bigger than normal swing, against the 4 weeks before.",
+  },
   setup: {
     title: "The app cannot reach its database",
     missing: "SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set in Vercel (Settings → Environment Variables). Add them and deploy again.",

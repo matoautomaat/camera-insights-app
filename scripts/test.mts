@@ -5,7 +5,8 @@ import { isSalesSource, payterAccounts, saleRow, salesSource, terminalOnline, te
 import { eventsQuery, parseProtectEvents } from "@/lib/protect-events";
 import { salesTotal, salesVerdict, type SalesReport, type TerminalSales } from "@/lib/sales";
 import { sessionExpiry, shouldRenew, signSession } from "@/lib/session";
-import { busiestWeekday, compareCounts, compareSince, periodDays, shareInterval, standoutHours, weekdayStats } from "@/lib/stats";
+import { salesDrops } from "@/lib/alerts";
+import { busiestWeekday, compareCounts, compareRate, compareSince, periodDays, shareInterval, standoutHours, weekdayStats } from "@/lib/stats";
 import { entriesVerdict, entryMethod, lineSinceInPeriod, timeInside, visitSales, type EntrancesReport } from "@/lib/entrances";
 import { buying, cameraCheck, middleStay, visitDays, type CameraVisitors, type VisitorsReport } from "@/lib/visitors";
 
@@ -75,6 +76,16 @@ const accounts = payterAccounts({ PAYTER_USERNAME: "a", PAYTER_PASSWORD: "p", PA
 ok("payter: two accounts, an incomplete third left out", accounts.length === 2 && accounts[1].id === 2 && accounts[1].domain === "e");
 ok("payter: the first account keeps its old progress name", salesSource(accounts[0]) === "payter" && salesSource(accounts[1]) === "payter:2");
 ok("payter: sales sources recognised, terminals not", isSalesSource("payter") && isSalesSource("payter:2") && !isSalesSource("payter-terminals:2"));
+
+// ── Sales drops ───────────────────────────────────────────────────────────────
+const drops = salesDrops([
+  { serial: "BROOD", recent: 6, base: 404, base_days: 28, last_sale: null },
+  { serial: "HILLE", recent: 5, base: 180, base_days: 28, last_sale: null },
+  { serial: "SFERIO", recent: 0, base: 18, base_days: 28, last_sale: null },
+  { serial: "NEW", recent: 0, base: 100, base_days: 5, last_sale: null },
+]);
+ok("drops: a machine that stopped selling is named, normal swing and quiet or new machines are not", drops.map((d) => d.serial).join() === "BROOD" && Math.round(drops[0].expected) === 29);
+ok("stats: a short stretch far under the long one is down, a little under is noise", compareRate(6, 404, 1 / 14) === "down" && compareRate(5, 180, 1 / 14) === "noise" && compareRate(0, 18, 1 / 14) === "tooFew");
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
 ok("stats: under 30 no verdict", compareCounts(20, 5) === "tooFew");

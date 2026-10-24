@@ -2,13 +2,15 @@ import Link from "next/link";
 import { after } from "next/server";
 import { Cctv, TriangleAlert } from "lucide-react";
 import { CameraWall } from "@/components/camera-wall";
+import { SalesDrops } from "@/components/sales-drops";
 import { FetchNow } from "@/components/fetch-now";
 import { SyncLine } from "@/components/sync-line";
 import { Change, Dot, Empty, PageHeader, PeriodLinks, Section, Stat } from "@/components/ui";
 import { durationText, fmt } from "@/i18n/format";
 import { getI18n } from "@/i18n/server";
 import { requireLogin } from "@/lib/auth";
-import { DEMO, getCameras, getEntrancesReport, getSalesReport, getSyncStates, getTerminals, getVisitorsReport } from "@/lib/data";
+import { salesDrops } from "@/lib/alerts";
+import { DEMO, getCameras, getEntrancesReport, getMachinePace, getSalesReport, getSyncStates, getTerminals, getVisitorsReport } from "@/lib/data";
 import { entriesVerdict, entryMethod, lineSinceInPeriod, timeInside, visitSales } from "@/lib/entrances";
 import { payterConfigured } from "@/lib/payter";
 import { salesTotal } from "@/lib/sales";
@@ -29,10 +31,11 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
   const shown = cameras.filter((c) => !c.hidden);
   const followed = terminals.filter((t) => t.followed);
   const entranceCameras = shown.filter((c) => c.entrance);
-  const [visitors, sales, entries] = await Promise.all([
+  const [visitors, sales, entries, pace] = await Promise.all([
     getVisitorsReport(shown.map((c) => c.cameraId), days, back),
     getSalesReport(followed.map((t) => t.serial), days, back),
     getEntrancesReport(entranceCameras.map((c) => c.cameraId), days, back),
+    getMachinePace(followed.map((t) => t.serial)),
   ]);
   // Whatever is due is read after the page, never before it.
   if (!DEMO) after(() => runSync());
@@ -69,6 +72,7 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
       />
 
       <div className="flex flex-col gap-8">
+        <SalesDrops drops={salesDrops(pace)} names={new Map(terminals.map((t) => [t.serial, t.label]))} m={m} f={f} />
         <PeriodLinks hrefFor={(key) => (key === "today" ? "/" : `/?period=${key}`)} current={period} labels={m.common.periods} />
 
         <div className="grid gap-4 sm:grid-cols-2">
